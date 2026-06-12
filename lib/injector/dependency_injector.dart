@@ -1,13 +1,26 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:share_app/data/auth_repository.dart';
+import 'package:share_app/data/expenses_repository.dart';
+import 'package:share_app/data/groups_repository.dart';
 import 'package:share_app/domain/invoker/invoker.dart';
 import 'package:share_app/domain/repository/auth_repository_contract.dart';
+import 'package:share_app/domain/repository/expenses_repository_contract.dart';
+import 'package:share_app/domain/repository/groups_repository_contract.dart';
+import 'package:share_app/domain/usecase/add_expense_use_case.dart';
+import 'package:share_app/domain/usecase/create_group_use_case.dart';
+import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
+import 'package:share_app/domain/usecase/edit_expense_use_case.dart';
 import 'package:share_app/domain/usecase/get_current_user_use_case.dart';
+import 'package:share_app/domain/usecase/import_csv_use_case.dart';
+import 'package:share_app/domain/usecase/join_group_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_email_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_google_use_case.dart';
 import 'package:share_app/domain/usecase/sign_out_use_case.dart';
 import 'package:share_app/domain/usecase/sign_up_with_email_use_case.dart';
+import 'package:share_app/domain/usecase/watch_expenses_use_case.dart';
+import 'package:share_app/domain/usecase/watch_groups_use_case.dart';
 import 'package:share_app/remote-data-source/firebase/auth_remote_datasource.dart';
+import 'package:share_app/remote-data-source/firebase/firestore_remote_datasource.dart';
 
 /// Punto único de inyección de dependencias (sin `get_it`/`riverpod`), igual
 /// que en radiocom-flutter: aquí se instancian datasources, repositorios,
@@ -21,6 +34,8 @@ class DependencyInjector {
   final Invoker invoker = Invoker();
 
   late AuthRepositoryContract _authRepository;
+  late GroupsRepositoryContract _groupsRepository;
+  late ExpensesRepositoryContract _expensesRepository;
 
   /// Debe llamarse una vez al arrancar la app (antes de `runApp`), para
   /// inicializar Firebase y las dependencias que dependen de él.
@@ -30,9 +45,16 @@ class DependencyInjector {
     );
 
     _authRepository = AuthRepository(remoteDataSource: AuthRemoteDataSource());
+    final firestoreDataSource = FirestoreRemoteDataSource();
+    _groupsRepository = GroupsRepository(remoteDataSource: firestoreDataSource);
+    _expensesRepository = ExpensesRepository(remoteDataSource: firestoreDataSource);
   }
 
   AuthRepositoryContract get authRepository => _authRepository;
+
+  GroupsRepositoryContract get groupsRepository => _groupsRepository;
+
+  ExpensesRepositoryContract get expensesRepository => _expensesRepository;
 
   // --- Casos de uso de autenticación ---
   SignInWithGoogleUseCase get signInWithGoogleUseCase =>
@@ -48,4 +70,24 @@ class DependencyInjector {
 
   GetCurrentUserUseCase get getCurrentUserUseCase =>
       GetCurrentUserUseCase(repository: authRepository);
+
+  // --- Casos de uso de grupos (Fase 2) ---
+  CreateGroupUseCase get createGroupUseCase => CreateGroupUseCase(repository: groupsRepository);
+
+  WatchGroupsUseCase get watchGroupsUseCase => WatchGroupsUseCase(repository: groupsRepository);
+
+  JoinGroupUseCase get joinGroupUseCase => JoinGroupUseCase(repository: groupsRepository);
+
+  // --- Casos de uso de gastos (Fase 3) ---
+  WatchExpensesUseCase get watchExpensesUseCase =>
+      WatchExpensesUseCase(repository: expensesRepository);
+
+  AddExpenseUseCase get addExpenseUseCase => AddExpenseUseCase(repository: expensesRepository);
+
+  EditExpenseUseCase get editExpenseUseCase => EditExpenseUseCase(repository: expensesRepository);
+
+  DeleteExpenseUseCase get deleteExpenseUseCase =>
+      DeleteExpenseUseCase(repository: expensesRepository);
+
+  ImportCsvUseCase get importCsvUseCase => ImportCsvUseCase(repository: expensesRepository);
 }
