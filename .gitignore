@@ -113,6 +113,7 @@ google-services.json
 GoogleService-Info.plist
 **/*.g.dart
 lib/firebase_options.dart
+fibase.json
 
 # Symbols
 app.*.symbols
@@ -125,3 +126,4 @@ app.*.symbols
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
 lib/firebase_options.dart
+firebase.json
