@@ -7,7 +7,7 @@ familia. Clean Architecture siguiendo el patrón de
 
 ## Estado actual
 
-Implementado (Fase 0 + Fase 1):
+Implementado (Fase 0 + Fase 1 + Fase 2 + Fase 3):
 - Estructura de carpetas completa (`domain`, `data`, `remote-data-source`,
   `models`, `injector`, `ui`).
 - Núcleo `Result` / `BaseUseCase` / `Invoker` / `UseCaseCallback`.
@@ -20,15 +20,30 @@ Implementado (Fase 0 + Fase 1):
 - `DependencyInjector` (inyección manual, sin get_it/riverpod), inicializa
   Firebase (`Firebase.initializeApp`).
 - UI MVP: pantalla de login (`ui/login`, con Google + email/contraseña +
-  registro) y placeholder de "Mis grupos" (`ui/groups`).
-- Contratos de repositorio/datasource para Fases 2-4 (grupos, gastos,
-  balances) ya definidos en `domain/repository` y
-  `data/datasource/firestore_remote_datasource_contract.dart`, modelados
-  sobre colecciones de Firestore (`groups`, `groups/{groupId}/expenses`,
-  `groups/{groupId}/settlements`).
+  registro).
+- Grupos sobre Cloud Firestore: `FirestoreRemoteDataSource`,
+  `GroupsRepository`, casos de uso `create_group`, `watch_groups`,
+  `join_group`. UI real en `ui/groups` (lista en tiempo real de los grupos
+  del usuario, crear grupo, unirse a uno existente por su ID) y
+  `ui/group-detail` (datos del grupo, ID para invitar, lista de miembros).
+- Gastos sobre Cloud Firestore (`groups/{groupId}/expenses`):
+  `FirestoreRemoteDataSource` (CRUD + batch), `ExpensesRepository`, casos de
+  uso `watch_expenses`, `add_expense`, `edit_expense`, `delete_expense`,
+  `import_csv`. UI real en `ui/group-detail` (lista de gastos en tiempo
+  real, borrar con pulsación larga) y `ui/expenses` (formulario de
+  alta/edición con reparto a partes iguales entre los miembros
+  seleccionados). Botón "Importar CSV" en `ui/group-detail` que usa
+  `file_picker` para leer un CSV exportado de Splitwise y crear un gasto por
+  fila (ver detalles del mapeo de columnas en
+  `lib/data/expenses_repository.dart`).
+- Contratos de repositorio/datasource para la Fase 4 (balances/
+  liquidaciones) ya definidos en `domain/repository/balances_repository_contract.dart`
+  y `data/datasource/firestore_remote_datasource_contract.dart`, modelados
+  sobre la subcolección `groups/{groupId}/settlements` (`addSettlement` y
+  `watchSettlements` ya implementados en el datasource).
 
 Pendiente (ver `PENDING.md`/`PENDING_USECASES.md` en cada carpeta): Fases
-2-7 (grupos, gastos, balances, importación CSV, pulido, móvil).
+4-7 (balances/liquidaciones, pulido, móvil).
 
 ## Modelo de datos en Firestore
 
@@ -108,7 +123,10 @@ máquina:
 
 ## Siguiente paso recomendado
 
-Fase 2 (grupos): implementar `firestore_remote_datasource.dart` (colección
-`groups`), `GroupsRepository`, los casos de uso `create_group`, `get_groups`
-(o `watch_groups`), `join_group`, y la UI de `ui/groups` (lista real) y
-`ui/group-detail`.
+Fase 4 (balances y liquidaciones): implementar `BalancesRepository`
+(`getBalances` a partir de `expenses` + `splits` + `settlements`,
+`watchSettlements`, `settleUp` ya soportado por el datasource), el algoritmo
+`calculate_balances_use_case.dart` (sección 6 del plan: balance neto por
+miembro y simplificación de deudas con `DebtTransfer`), y la UI de
+`ui/balances` (pantalla "quién debe a quién" + registro de liquidaciones),
+accesible desde `ui/group-detail`.
