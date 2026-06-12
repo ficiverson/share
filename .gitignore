@@ -107,6 +107,12 @@ unlinked_spec.ds
 # Coverage
 coverage/
 
+# Secrets / config local
+.env
+google-services.json
+GoogleService-Info.plist
+**/*.g.dart
+
 # Symbols
 app.*.symbols
 
