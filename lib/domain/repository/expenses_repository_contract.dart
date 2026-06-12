@@ -1,18 +1,22 @@
 import 'package:share_app/models/expense.dart';
 
 /// Contrato del repositorio de gastos. Implementado en
-/// `data/expenses_repository.dart` (Fase 3).
+/// `data/expenses_repository.dart` (Fase 3) sobre la subcolección
+/// `groups/{groupId}/expenses` de Firestore.
 abstract class ExpensesRepositoryContract {
-  Future<List<Expense>> getExpenses(String groupSpreadsheetId);
+  /// Stream con los gastos del grupo, ordenados por fecha descendente.
+  Stream<List<Expense>> watchExpenses(String groupId);
 
-  Future<Expense> addExpense(String groupSpreadsheetId, Expense expense);
+  Future<List<Expense>> getExpenses(String groupId);
 
-  Future<Expense> editExpense(String groupSpreadsheetId, Expense expense);
+  Future<Expense> addExpense(String groupId, Expense expense);
 
-  Future<void> deleteExpense(String groupSpreadsheetId, String expenseId);
+  Future<Expense> editExpense(String groupId, Expense expense);
+
+  Future<void> deleteExpense(String groupId, String expenseId);
 
   /// Importa un CSV exportado de Splitwise (ver sección 4 del plan):
   /// `Fecha, Descripción, Categoría, Coste, Moneda, <Miembro 1>, <Miembro 2>, ...`
-  /// y vuelca las filas resultantes en las hojas Expenses/Splits.
-  Future<int> importCsv(String groupSpreadsheetId, String csvContent);
+  /// y crea un documento de gasto (con sus `splits`) por cada fila.
+  Future<int> importCsv(String groupId, String csvContent);
 }

@@ -1,20 +1,36 @@
 import 'package:share_app/models/group.dart';
 
-/// Contrato del repositorio de grupos. Implementado en `data/groups_repository.dart`
-/// (Fase 2), combinando el índice cacheado localmente con Drive/Sheets.
+/// Contrato del repositorio de grupos. Implementado en
+/// `data/groups_repository.dart` (Fase 2) sobre Cloud Firestore: cada grupo
+/// es un documento de la colección `groups`, con `memberIds` (uids) para
+/// las reglas de seguridad y para filtrar `getGroups()`.
 abstract class GroupsRepositoryContract {
-  /// Lista los grupos del usuario (desde el índice en `appDataFolder`).
-  Future<List<Group>> getGroups();
+  /// Stream con los grupos en los que el usuario indicado (uid) es miembro
+  /// (`where('memberIds', arrayContains: uid)`).
+  Stream<List<Group>> watchGroups(String uid);
 
-  /// Crea un nuevo Spreadsheet (hojas Info/Members/Expenses/Splits/Settlements),
-  /// lo comparte con los emails indicados y lo añade al índice del usuario.
+  /// Lista puntual de los grupos del usuario.
+  Future<List<Group>> getGroups(String uid);
+
+  /// Crea un nuevo documento en `groups` con el creador como único miembro.
   Future<Group> createGroup({
     required String name,
     required String currency,
-    required List<String> memberEmails,
+    required String createdByUid,
+    required String createdByName,
+    required String createdByEmail,
+    String? createdByPhotoUrl,
   });
 
-  /// Se une a un grupo existente a partir de su `spreadsheetId` y lo añade
-  /// al índice del usuario.
-  Future<Group> joinGroup(String spreadsheetId);
+  /// Añade al usuario indicado (por uid) como miembro de un grupo existente.
+  Future<Group> joinGroup({
+    required String groupId,
+    required String memberUid,
+    required String memberName,
+    required String memberEmail,
+    String? memberPhotoUrl,
+  });
+
+  /// Stream con los datos de un grupo concreto (para la pantalla de detalle).
+  Stream<Group> watchGroup(String groupId);
 }

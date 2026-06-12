@@ -1,22 +1,23 @@
 import 'package:share_app/models/user.dart';
 
-/// Contrato del repositorio de autenticación. Implementado por
-/// `AuthRepository` en `data/`, que combina el datasource local (sesión
-/// cacheada) con el remoto (`google_sign_in`).
+/// Contrato del repositorio de autenticación, respaldado por Firebase Auth.
 abstract class AuthRepositoryContract {
-  /// Lanza el flujo de Google Sign-In. Devuelve el usuario autenticado.
-  Future<AppUser> signIn();
+  /// Inicia sesión con Google (vía `google_sign_in`, las credenciales se
+  /// pasan a Firebase Auth).
+  Future<AppUser> signInWithGoogle();
 
-  /// Cierra la sesión actual (Google + caché local).
+  /// Inicia sesión con email y contraseña.
+  Future<AppUser> signInWithEmail(String email, String password);
+
+  /// Crea una cuenta nueva con email y contraseña.
+  Future<AppUser> signUpWithEmail(String email, String password, String displayName);
+
+  /// Cierra la sesión actual.
   Future<void> signOut();
 
-  /// Devuelve el usuario cacheado, o `null` si no hay sesión activa.
+  /// Usuario actualmente autenticado (sincrónico), o `null` si no hay sesión.
   AppUser? getCurrentUser();
 
-  /// Intenta restaurar una sesión previa (silent sign-in) al iniciar la app.
-  Future<AppUser?> restoreSession();
-
-  /// Cabeceras HTTP autenticadas (Bearer token) para llamar a las APIs de
-  /// Google Drive/Sheets.
-  Future<Map<String, String>> getAuthHeaders();
+  /// Stream con los cambios de sesión (login/logout), emitido por Firebase Auth.
+  Stream<AppUser?> authStateChanges();
 }
