@@ -1,14 +1,17 @@
 import 'package:share_app/models/user.dart';
 
-/// Contrato del datasource remoto de autenticación: envuelve `google_sign_in`
-/// y expone el usuario de Google y las cabeceras autenticadas para llamar a
-/// las APIs de Drive/Sheets.
+/// Contrato del datasource remoto de autenticación: envuelve Firebase Auth
+/// (incluyendo el flujo de credenciales de Google a través de `google_sign_in`).
 abstract class AuthRemoteDataSourceContract {
-  Future<AppUser> signIn();
+  Future<AppUser> signInWithGoogle();
 
-  Future<AppUser?> signInSilently();
+  Future<AppUser> signInWithEmail(String email, String password);
+
+  Future<AppUser> signUpWithEmail(String email, String password, String displayName);
 
   Future<void> signOut();
 
-  Future<Map<String, String>> getAuthHeaders();
+  AppUser? getCurrentUser();
+
+  Stream<AppUser?> authStateChanges();
 }

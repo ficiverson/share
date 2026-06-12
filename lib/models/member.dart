@@ -1,6 +1,7 @@
-/// Miembro de un grupo. Corresponde a una fila de la hoja "Members".
+/// Miembro de un grupo. Se guarda como mapa dentro del documento del grupo
+/// en Firestore (`groups/{groupId}.members.{uid}`).
 class Member {
-  final String memberId;
+  final String memberId; // uid de Firebase Auth
   final String name;
   final String email;
   final String? photoUrl;
@@ -14,23 +15,20 @@ class Member {
     required this.joinedAt,
   });
 
-  factory Member.fromRow(List<dynamic> row) => Member(
-        memberId: row.isNotEmpty ? row[0].toString() : '',
-        name: row.length > 1 ? row[1].toString() : '',
-        email: row.length > 2 ? row[2].toString() : '',
-        photoUrl: row.length > 3 && row[3].toString().isNotEmpty
-            ? row[3].toString()
-            : null,
-        joinedAt: row.length > 4 && row[4].toString().isNotEmpty
-            ? DateTime.parse(row[4].toString())
+  factory Member.fromMap(String memberId, Map<String, dynamic> map) => Member(
+        memberId: memberId,
+        name: map['name'] as String? ?? '',
+        email: map['email'] as String? ?? '',
+        photoUrl: map['photoUrl'] as String?,
+        joinedAt: map['joinedAt'] != null
+            ? DateTime.parse(map['joinedAt'] as String)
             : DateTime.now(),
       );
 
-  List<dynamic> toRow() => [
-        memberId,
-        name,
-        email,
-        photoUrl ?? '',
-        joinedAt.toIso8601String(),
-      ];
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'email': email,
+        'photoUrl': photoUrl,
+        'joinedAt': joinedAt.toIso8601String(),
+      };
 }

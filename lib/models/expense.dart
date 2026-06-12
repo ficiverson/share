@@ -1,14 +1,15 @@
 import 'split.dart';
 
-/// Gasto registrado en un grupo. Fila de la hoja "Expenses" + sus filas
-/// relacionadas en "Splits".
+/// Gasto registrado en un grupo. Documento de la subcolección
+/// `groups/{groupId}/expenses/{expenseId}`, con los repartos (`splits`)
+/// embebidos como array.
 class Expense {
   final String expenseId;
   final String description;
   final double amount;
   final String currency;
   final String category;
-  final String paidBy; // memberId
+  final String paidBy; // memberId (uid)
   final DateTime date;
   final DateTime createdAt;
   final String notes;
@@ -27,35 +28,32 @@ class Expense {
     this.splits = const [],
   });
 
-  /// Fila de "Expenses": expense_id | description | amount | currency |
-  /// category | paid_by | date | created_at | notes
-  List<dynamic> toRow() => [
-        expenseId,
-        description,
-        amount,
-        currency,
-        category,
-        paidBy,
-        date.toIso8601String(),
-        createdAt.toIso8601String(),
-        notes,
-      ];
+  Map<String, dynamic> toMap() => {
+        'description': description,
+        'amount': amount,
+        'currency': currency,
+        'category': category,
+        'paidBy': paidBy,
+        'date': date.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(),
+        'notes': notes,
+        'splits': splits.map((s) => s.toMap()).toList(),
+      };
 
-  factory Expense.fromRow(List<dynamic> row, {List<Split> splits = const []}) =>
-      Expense(
-        expenseId: row.isNotEmpty ? row[0].toString() : '',
-        description: row.length > 1 ? row[1].toString() : '',
-        amount: row.length > 2 ? double.tryParse(row[2].toString()) ?? 0 : 0,
-        currency: row.length > 3 ? row[3].toString() : 'EUR',
-        category: row.length > 4 ? row[4].toString() : '',
-        paidBy: row.length > 5 ? row[5].toString() : '',
-        date: row.length > 6 && row[6].toString().isNotEmpty
-            ? DateTime.parse(row[6].toString())
+  factory Expense.fromMap(String expenseId, Map<String, dynamic> map) => Expense(
+        expenseId: expenseId,
+        description: map['description'] as String? ?? '',
+        amount: (map['amount'] as num?)?.toDouble() ?? 0,
+        currency: map['currency'] as String? ?? 'EUR',
+        category: map['category'] as String? ?? '',
+        paidBy: map['paidBy'] as String? ?? '',
+        date: map['date'] != null ? DateTime.parse(map['date'] as String) : DateTime.now(),
+        createdAt: map['createdAt'] != null
+            ? DateTime.parse(map['createdAt'] as String)
             : DateTime.now(),
-        createdAt: row.length > 7 && row[7].toString().isNotEmpty
-            ? DateTime.parse(row[7].toString())
-            : DateTime.now(),
-        notes: row.length > 8 ? row[8].toString() : '',
-        splits: splits,
+        notes: map['notes'] as String? ?? '',
+        splits: ((map['splits'] as List?) ?? const [])
+            .map((s) => Split.fromMap(Map<String, dynamic>.from(s as Map)))
+            .toList(),
       );
 }
