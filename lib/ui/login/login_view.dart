@@ -36,6 +36,7 @@ class _LoginViewState extends State<LoginView> implements LoginViewContract {
       invoker: injector.invoker,
       getCurrentUserUseCase: injector.getCurrentUserUseCase,
       signInWithGoogleUseCase: injector.signInWithGoogleUseCase,
+      signInWithAppleUseCase: injector.signInWithAppleUseCase,
       signInWithEmailUseCase: injector.signInWithEmailUseCase,
       signUpWithEmailUseCase: injector.signUpWithEmailUseCase,
     );
@@ -121,6 +122,16 @@ class _LoginViewState extends State<LoginView> implements LoginViewContract {
                         onPressed: _presenter.signInWithGoogle,
                         icon: const Icon(Icons.login),
                         label: const Text('Iniciar sesión con Google'),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _presenter.signInWithApple,
+                        icon: const Icon(Icons.apple),
+                        label: const Text('Iniciar sesión con Apple'),
                       ),
                       const SizedBox(height: 24),
                       const Row(

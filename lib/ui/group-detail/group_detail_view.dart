@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:intl/intl.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,6 +44,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
       watchExpensesUseCase: injector.watchExpensesUseCase,
       deleteExpenseUseCase: injector.deleteExpenseUseCase,
       importCsvUseCase: injector.importCsvUseCase,
+      leaveGroupUseCase: injector.leaveGroupUseCase,
     );
     _presenter.watchGroup(widget.groupId);
   }
@@ -97,6 +100,11 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $error')));
   }
 
+  @override
+  void onGroupLeft() {
+    if (mounted) Navigator.of(context).pop();
+  }
+
   void _copyGroupId() {
     Clipboard.setData(ClipboardData(text: widget.groupId));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -109,6 +117,29 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (group == null) return memberId;
     final member = group.members.where((m) => m.memberId == memberId);
     return member.isEmpty ? memberId : member.first.name;
+  }
+
+  Future<void> _confirmLeaveGroup() async {
+    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
+    if (uid == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Salir del grupo'),
+        content: const Text('¿Seguro que quieres salir de este grupo? Perderás el acceso a sus gastos.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: ShareColors.error, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Salir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      _presenter.leaveGroup(widget.groupId, uid);
+    }
   }
 
   Future<void> _addExpense() async {
@@ -150,6 +181,72 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (fileBytes == null) return;
     final csvContent = utf8.decode(fileBytes);
     _presenter.importCsv(widget.groupId, csvContent);
+  }
+
+  Widget _buildSummaryCard(Group group) {
+    final expenses = _expenses ?? [];
+    final totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
+
+    // Compute current user's net: total paid - total owed
+    double userPaid = 0;
+    double userOwed = 0;
+    if (uid != null) {
+      for (final expense in expenses) {
+        if (expense.paidBy == uid) userPaid += expense.amount;
+        for (final split in expense.splits) {
+          if (split.memberId == uid) userOwed += split.shareAmount;
+        }
+      }
+    }
+    final userNet = userPaid - userOwed;
+    final netColor = userNet > 0.01
+        ? ShareColors.positive
+        : userNet < -0.01
+            ? ShareColors.negative
+            : null;
+    final netLabel = userNet > 0.01
+        ? 'Te deben ${userNet.toStringAsFixed(2)} ${group.currency}'
+        : userNet < -0.01
+            ? 'Debes ${(-userNet).toStringAsFixed(2)} ${group.currency}'
+            : 'Estás al día';
+
+    return Card(
+      color: ShareColors.primary.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Total gastado', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                  Text(
+                    '${totalSpent.toStringAsFixed(2)} ${group.currency}',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  Text('${expenses.length} gasto${expenses.length == 1 ? '' : 's'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                ],
+              ),
+            ),
+            if (uid != null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text('Tu balance', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                  Text(
+                    netLabel,
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.bold, color: netColor ?? Colors.black87),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMembers(Group group) {
@@ -200,8 +297,15 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
           )
         else if (expenses.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('Todavía no hay gastos en este grupo.'),
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              children: [
+                Icon(Icons.receipt_long_outlined, size: 48, color: Colors.black26),
+                SizedBox(height: 8),
+                Text('Todavía no hay gastos en este grupo.',
+                    style: TextStyle(color: Colors.black45)),
+              ],
+            ),
           )
         else
           ...expenses.map((expense) => Card(
@@ -209,7 +313,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                   leading: const Icon(Icons.receipt_long, color: ShareColors.primary),
                   title: Text(expense.description.isEmpty ? '(sin descripción)' : expense.description),
                   subtitle: Text(
-                    'Pagado por ${_memberName(expense.paidBy)} · ${expense.date.day}/${expense.date.month}/${expense.date.year}'
+                    'Pagado por ${_memberName(expense.paidBy)} · '
+                    '${DateFormat('d MMM yyyy', 'es').format(expense.date)}'
                     '${expense.category.isNotEmpty ? ' · ${expense.category}' : ''}',
                   ),
                   trailing: Text(
@@ -241,6 +346,23 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
             tooltip: 'Importar CSV de Splitwise',
             onPressed: _actionLoading ? null : _importCsv,
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'leave') _confirmLeaveGroup();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'leave',
+                child: Row(
+                  children: [
+                    Icon(Icons.exit_to_app, color: ShareColors.error),
+                    SizedBox(width: 8),
+                    Text('Salir del grupo', style: TextStyle(color: ShareColors.error)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: _error != null
@@ -254,6 +376,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
+                          _buildSummaryCard(group),
                           _buildMembers(group),
                           _buildExpenses(group),
                           const SizedBox(height: 80),

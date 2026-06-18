@@ -64,4 +64,8 @@ class GroupsRepository implements GroupsRepositoryContract {
     );
     return _remoteDataSource.addMember(groupId, member);
   }
+
+  @override
+  Future<void> leaveGroup(String groupId, String uid) =>
+      _remoteDataSource.leaveGroup(groupId, uid);
 }

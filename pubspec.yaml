@@ -18,13 +18,14 @@ dependencies:
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.0
 
-  # Login con Google/Apple (credenciales pasadas a Firebase Auth)
-  google_sign_in: ^6.2.1
+  # Login con Apple (web: Firebase popup; móvil: sign_in_with_apple + nonce)
+  # google_sign_in se añade cuando se compile para móvil (en web Firebase
+  # gestiona el popup de Google directamente sin necesitar ese paquete).
   sign_in_with_apple: ^6.1.2
   crypto: ^3.0.3
 
   # Utilidades
-  intl: ^0.19.0
+  intl: ^0.20.2
   uuid: ^4.5.1
   cupertino_icons: ^1.0.8
   csv: ^6.0.0

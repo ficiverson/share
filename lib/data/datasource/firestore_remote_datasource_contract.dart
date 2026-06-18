@@ -19,6 +19,8 @@ abstract class FirestoreRemoteDataSourceContract {
 
   Future<Group> addMember(String groupId, Member member);
 
+  Future<void> leaveGroup(String groupId, String uid);
+
   // --- expenses ---
   Stream<List<Expense>> watchExpenses(String groupId);
 

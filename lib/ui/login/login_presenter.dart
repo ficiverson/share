@@ -2,6 +2,7 @@ import 'package:share_app/domain/invoker/invoker.dart';
 import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/get_current_user_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_email_use_case.dart';
+import 'package:share_app/domain/usecase/sign_in_with_apple_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_google_use_case.dart';
 import 'package:share_app/domain/usecase/sign_up_with_email_use_case.dart';
 import 'package:share_app/models/user.dart';
@@ -20,6 +21,7 @@ class LoginPresenter {
   final Invoker invoker;
   final GetCurrentUserUseCase getCurrentUserUseCase;
   final SignInWithGoogleUseCase signInWithGoogleUseCase;
+  final SignInWithAppleUseCase signInWithAppleUseCase;
   final SignInWithEmailUseCase signInWithEmailUseCase;
   final SignUpWithEmailUseCase signUpWithEmailUseCase;
 
@@ -28,6 +30,7 @@ class LoginPresenter {
     required this.invoker,
     required this.getCurrentUserUseCase,
     required this.signInWithGoogleUseCase,
+    required this.signInWithAppleUseCase,
     required this.signInWithEmailUseCase,
     required this.signUpWithEmailUseCase,
   });
@@ -39,6 +42,19 @@ class LoginPresenter {
         _view.onSessionRestored(result.getData() as AppUser);
       } else {
         _view.onNoSession();
+      }
+    });
+  }
+
+  /// Lanza el flujo de Apple Sign-In (vía Firebase Auth).
+  void signInWithApple() {
+    _view.onAuthLoading(true);
+    invoker.execute(signInWithAppleUseCase).listen((result) {
+      _view.onAuthLoading(false);
+      if (result is Success) {
+        _view.onAuthSuccess(result.getData() as AppUser);
+      } else {
+        _view.onAuthError((result as Error).getError());
       }
     });
   }

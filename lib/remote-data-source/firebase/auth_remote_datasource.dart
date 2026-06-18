@@ -4,40 +4,39 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:share_app/data/datasource/auth_remote_datasource_contract.dart';
 import 'package:share_app/models/user.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Implementación de [AuthRemoteDataSourceContract] sobre Firebase Auth.
-/// Para Google, usa `google_sign_in` solo para obtener el `idToken`/
-/// `accessToken` y crear una [fb.GoogleAuthProvider] credential.
+///
+/// - **Web**: Google y Apple usan `signInWithPopup` de Firebase directamente.
+///   No se necesita `google_sign_in` (ese paquete auto-registra un plugin web
+///   que requiere un Web Client ID en `<meta>`; evitarlo simplifica el setup).
+/// - **Móvil**: añadir `google_sign_in` al pubspec y descomentar el bloque
+///   `!kIsWeb` de `signInWithGoogle` cuando se compile para Android/iOS.
 class AuthRemoteDataSource implements AuthRemoteDataSourceContract {
   final fb.FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
 
-  AuthRemoteDataSource({
-    fb.FirebaseAuth? firebaseAuth,
-    GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? fb.FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn(scopes: const ['email', 'profile']);
+  AuthRemoteDataSource({fb.FirebaseAuth? firebaseAuth})
+      : _firebaseAuth = firebaseAuth ?? fb.FirebaseAuth.instance;
 
   @override
   Future<AppUser> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      throw Exception('Inicio de sesión cancelado por el usuario');
+    // En web Firebase gestiona el popup sin necesitar google_sign_in.
+    // Para móvil: añadir google_sign_in al pubspec y usar GoogleSignIn aquí.
+    if (!kIsWeb) {
+      throw UnimplementedError(
+        'Google Sign-In en móvil requiere el paquete google_sign_in. '
+        'Añádelo al pubspec y completa el flujo de credenciales.',
+      );
     }
-    final googleAuth = await googleUser.authentication;
-    final credential = fb.GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-    final userCredential = await _firebaseAuth.signInWithCredential(credential);
+    final provider = fb.GoogleAuthProvider()
+      ..addScope('email')
+      ..addScope('profile');
+    final userCredential = await _firebaseAuth.signInWithPopup(provider);
     final user = userCredential.user;
-    if (user == null) {
-      throw Exception('No se pudo obtener el usuario de Firebase');
-    }
+    if (user == null) throw Exception('No se pudo obtener el usuario de Firebase');
     return AppUser.fromFirebaseUser(user);
   }
 
@@ -119,12 +118,7 @@ class AuthRemoteDataSource implements AuthRemoteDataSourceContract {
   }
 
   @override
-  Future<void> signOut() async {
-    await Future.wait([
-      _firebaseAuth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
-  }
+  Future<void> signOut() => _firebaseAuth.signOut();
 
   @override
   AppUser? getCurrentUser() {

@@ -5,6 +5,7 @@ import 'package:share_app/domain/repository/groups_repository_contract.dart';
 import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
 import 'package:share_app/domain/usecase/import_csv_use_case.dart';
+import 'package:share_app/domain/usecase/leave_group_use_case.dart';
 import 'package:share_app/domain/usecase/watch_expenses_use_case.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
@@ -19,6 +20,7 @@ abstract class GroupDetailViewContract {
   void onExpenseDeleted();
   void onCsvImported(int count);
   void onActionError(String error);
+  void onGroupLeft();
 }
 
 class GroupDetailPresenter {
@@ -28,6 +30,7 @@ class GroupDetailPresenter {
   final WatchExpensesUseCase watchExpensesUseCase;
   final DeleteExpenseUseCase deleteExpenseUseCase;
   final ImportCsvUseCase importCsvUseCase;
+  final LeaveGroupUseCase leaveGroupUseCase;
 
   StreamSubscription<Group>? _groupSubscription;
   StreamSubscription<List<Expense>>? _expensesSubscription;
@@ -39,6 +42,7 @@ class GroupDetailPresenter {
     required this.watchExpensesUseCase,
     required this.deleteExpenseUseCase,
     required this.importCsvUseCase,
+    required this.leaveGroupUseCase,
   });
 
   /// Empieza a escuchar en tiempo real los datos del grupo y sus gastos.
@@ -82,6 +86,22 @@ class GroupDetailPresenter {
       _view.onActionLoading(false);
       if (result is Success) {
         _view.onCsvImported(result.getData() as int);
+      } else {
+        _view.onActionError((result as Error).getError());
+      }
+    });
+  }
+
+  void leaveGroup(String groupId, String uid) {
+    _view.onActionLoading(true);
+    invoker
+        .execute(leaveGroupUseCase.withParams(
+      LeaveGroupParams(groupId: groupId, uid: uid),
+    ))
+        .listen((result) {
+      _view.onActionLoading(false);
+      if (result is Success) {
+        _view.onGroupLeft();
       } else {
         _view.onActionError((result as Error).getError());
       }
