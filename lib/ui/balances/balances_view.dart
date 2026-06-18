@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/balance.dart';
 import 'package:share_app/models/group.dart';
@@ -150,8 +151,16 @@ class _BalancesViewState extends State<BalancesView> implements BalancesViewCont
                     ),
                     if (transfers == null || transfers.isEmpty)
                       const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('No hay deudas pendientes. ¡Todo está saldado!'),
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Column(
+                          children: [
+                            Icon(Icons.check_circle_outline, size: 48, color: ShareColors.positive),
+                            SizedBox(height: 8),
+                            Text('¡Todo está saldado! No hay deudas pendientes.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.black54)),
+                          ],
+                        ),
                       )
                     else
                       ...transfers.map((transfer) => Card(

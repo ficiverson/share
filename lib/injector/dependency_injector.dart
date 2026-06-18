@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:share_app/firebase_options.dart';
 import 'package:share_app/data/auth_repository.dart';
 import 'package:share_app/data/balances_repository.dart';
 import 'package:share_app/data/expenses_repository.dart';
@@ -17,7 +18,9 @@ import 'package:share_app/domain/usecase/get_balances_use_case.dart';
 import 'package:share_app/domain/usecase/get_current_user_use_case.dart';
 import 'package:share_app/domain/usecase/import_csv_use_case.dart';
 import 'package:share_app/domain/usecase/join_group_use_case.dart';
+import 'package:share_app/domain/usecase/leave_group_use_case.dart';
 import 'package:share_app/domain/usecase/settle_up_use_case.dart';
+import 'package:share_app/domain/usecase/sign_in_with_apple_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_email_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_google_use_case.dart';
 import 'package:share_app/domain/usecase/sign_out_use_case.dart';
@@ -70,6 +73,9 @@ class DependencyInjector {
   SignInWithGoogleUseCase get signInWithGoogleUseCase =>
       SignInWithGoogleUseCase(repository: authRepository);
 
+  SignInWithAppleUseCase get signInWithAppleUseCase =>
+      SignInWithAppleUseCase(repository: authRepository);
+
   SignInWithEmailUseCase get signInWithEmailUseCase =>
       SignInWithEmailUseCase(repository: authRepository);
 
@@ -87,6 +93,8 @@ class DependencyInjector {
   WatchGroupsUseCase get watchGroupsUseCase => WatchGroupsUseCase(repository: groupsRepository);
 
   JoinGroupUseCase get joinGroupUseCase => JoinGroupUseCase(repository: groupsRepository);
+
+  LeaveGroupUseCase get leaveGroupUseCase => LeaveGroupUseCase(repository: groupsRepository);
 
   // --- Casos de uso de gastos (Fase 3) ---
   WatchExpensesUseCase get watchExpensesUseCase =>

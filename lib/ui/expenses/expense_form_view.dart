@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Split;
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';

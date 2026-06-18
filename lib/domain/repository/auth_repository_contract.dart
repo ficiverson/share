@@ -6,6 +6,10 @@ abstract class AuthRepositoryContract {
   /// pasan a Firebase Auth).
   Future<AppUser> signInWithGoogle();
 
+  /// Inicia sesión con Apple ID (vía `sign_in_with_apple` en móvil,
+  /// Firebase popup en web).
+  Future<AppUser> signInWithApple();
+
   /// Inicia sesión con email y contraseña.
   Future<AppUser> signInWithEmail(String email, String password);
 

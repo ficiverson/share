@@ -80,6 +80,14 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
     return Group.fromMap(doc.id, data);
   }
 
+  @override
+  Future<void> leaveGroup(String groupId, String uid) async {
+    await _groups.doc(groupId).update({
+      'memberIds': FieldValue.arrayRemove([uid]),
+      'members.$uid': FieldValue.delete(),
+    });
+  }
+
   // --- expenses (Fase 3) ---
 
   @override

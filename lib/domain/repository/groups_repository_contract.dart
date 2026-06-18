@@ -33,4 +33,7 @@ abstract class GroupsRepositoryContract {
 
   /// Stream con los datos de un grupo concreto (para la pantalla de detalle).
   Stream<Group> watchGroup(String groupId);
+
+  /// Elimina al usuario indicado (uid) del grupo (de `memberIds` y `members`).
+  Future<void> leaveGroup(String groupId, String uid);
 }

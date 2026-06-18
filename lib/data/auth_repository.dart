@@ -15,6 +15,9 @@ class AuthRepository implements AuthRepositoryContract {
   Future<AppUser> signInWithGoogle() => _remoteDataSource.signInWithGoogle();
 
   @override
+  Future<AppUser> signInWithApple() => _remoteDataSource.signInWithApple();
+
+  @override
   Future<AppUser> signInWithEmail(String email, String password) =>
       _remoteDataSource.signInWithEmail(email, password);
 
