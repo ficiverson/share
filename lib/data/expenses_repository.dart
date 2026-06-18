@@ -32,37 +32,67 @@ class ExpensesRepository implements ExpensesRepositoryContract {
   /// Importa un CSV exportado de Splitwise. Formato esperado (cabecera):
   /// `Fecha, Descripción, Categoría, Coste, Moneda, <Miembro 1>, <Miembro 2>, ...`
   ///
-  /// Cada columna de miembro contiene el balance neto de esa persona para el
-  /// gasto (positivo si "le deben", negativo si "debe"). Para mapear esto a
-  /// nuestro modelo (reparto a partes iguales):
-  /// - Se identifica a quien pagó como el miembro con el valor más alto
-  ///   (normalmente positivo y cercano al coste total).
-  /// - El reparto se hace a partes iguales entre todos los miembros con un
-  ///   valor numérico en esa fila (no vacío).
+  /// En el formato Splitwise, cada columna de miembro contiene el **balance
+  /// neto** de esa persona: **negativo** si pagó (le deben), **positivo** si
+  /// debe (se le cobró su parte). Por tanto, el pagador es el miembro con el
+  /// valor más negativo.
   ///
-  /// Los nombres de columna de miembro se cruzan (sin distinguir
-  /// mayúsculas/acentos) con los nombres de los miembros del grupo; las
-  /// columnas que no coincidan con ningún miembro se ignoran.
+  /// Estrategia de mapeo de columnas a miembros del grupo:
+  /// 1. Intenta cruzar el nombre de columna con `member.name` (sin
+  ///    mayúsculas/acentos).
+  /// 2. Si ninguna columna coincide por nombre, usa el orden de posición:
+  ///    columna N → member N del grupo (útil cuando los nombres difieren).
   @override
-  Future<int> importCsv(String groupId, String csvContent) async {
+  Future<int> importCsv(String groupId, String csvContent, {Map<String, String>? columnMapping}) async {
     final group = await _remoteDataSource.watchGroup(groupId).first;
+
+    // Normalizar saltos de línea (\r\n → \n) para compatibilidad Windows/Mac.
+    final normalizedContent = csvContent.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
     final rows = const CsvToListConverter(eol: '\n', shouldParseNumbers: false)
-        .convert(csvContent, fieldDelimiter: ',');
+        .convert(normalizedContent, fieldDelimiter: ',');
     if (rows.isEmpty) return 0;
 
-    final header = rows.first.map((c) => c.toString().trim()).toList();
+    // Saltar filas vacías al principio (Splitwise a veces añade una línea en blanco tras la cabecera).
+    final nonEmptyRows = rows.where((r) => r.isNotEmpty && r.any((c) => c.toString().trim().isNotEmpty)).toList();
+    if (nonEmptyRows.isEmpty) return 0;
+
+    final header = nonEmptyRows.first.map((c) => c.toString().trim()).toList();
     final fixedColumns = {'fecha', 'descripción', 'descripcion', 'categoría', 'categoria', 'coste', 'moneda'};
 
-    // Índices de las columnas de miembros, con su memberId asociado.
-    final memberColumns = <int, String>{};
+    // Identificar índices de columnas que no son fijas (= columnas de miembros en el CSV).
+    final csvMemberIndices = <int>[];
     for (var i = 0; i < header.length; i++) {
-      final columnName = _normalize(header[i]);
-      if (fixedColumns.contains(columnName)) continue;
-      final member = group.members.firstWhereOrNull(
-        (m) => _normalize(m.name) == columnName,
-      );
-      if (member != null) {
-        memberColumns[i] = member.memberId;
+      if (!fixedColumns.contains(_normalize(header[i]))) {
+        csvMemberIndices.add(i);
+      }
+    }
+
+    // Construir índice columna → memberId.
+    final memberColumns = <int, String>{};
+
+    if (columnMapping != null && columnMapping.isNotEmpty) {
+      // Mapeo explícito: csvColumnName → memberId (del diálogo de importación).
+      for (final idx in csvMemberIndices) {
+        final csvName = header[idx];
+        final memberId = columnMapping[csvName];
+        if (memberId != null) memberColumns[idx] = memberId;
+      }
+    } else {
+      // 1) Intentar mapeo por nombre normalizado.
+      for (final idx in csvMemberIndices) {
+        final columnName = _normalize(header[idx]);
+        final member = group.members.firstWhereOrNull(
+          (m) => _normalize(m.name) == columnName,
+        );
+        if (member != null) memberColumns[idx] = member.memberId;
+      }
+
+      // 2) Fallback por posición si ningún nombre coincidió.
+      if (memberColumns.isEmpty) {
+        for (var j = 0; j < csvMemberIndices.length && j < group.members.length; j++) {
+          memberColumns[csvMemberIndices[j]] = group.members[j].memberId;
+        }
       }
     }
 
@@ -75,11 +105,10 @@ class ExpensesRepository implements ExpensesRepositoryContract {
     final expensesToImport = <Expense>[];
     final now = DateTime.now();
 
-    for (final row in rows.skip(1)) {
-      if (row.isEmpty || row.every((c) => c.toString().trim().isEmpty)) continue;
-
+    for (final row in nonEmptyRows.skip(1)) {
+      if (costIndex < 0 || costIndex >= row.length) continue;
       final cost = double.tryParse(row[costIndex].toString().trim().replaceAll(',', '.'));
-      if (cost == null) continue;
+      if (cost == null || cost == 0) continue;
 
       // Valores numéricos por miembro presentes en esta fila.
       final memberValues = <String, double>{};
@@ -92,24 +121,51 @@ class ExpensesRepository implements ExpensesRepositoryContract {
       }
       if (memberValues.isEmpty) continue;
 
-      // Quien pagó = el miembro con el valor más alto.
-      final paidBy = memberValues.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      // En Splitwise, el pagador tiene el valor MÁS NEGATIVO (le deben dinero).
+      final paidBy = memberValues.entries.reduce((a, b) => a.value <= b.value ? a : b).key;
 
-      final shareAmount = cost / memberValues.length;
-      final splits = memberValues.keys
-          .map((memberId) => Split(memberId: memberId, shareAmount: shareAmount, shareType: ShareType.equal))
+      // Los valores del CSV representan el cambio de balance neto de cada persona:
+      //   valor > 0 → debe esa cantidad (su parte del gasto)
+      //   valor < 0 → pagó; su propia parte = coste + valor_negativo (puede ser 0)
+      //
+      // Ejemplo igual:  111 EUR, Gemma=-55.50, Iverson=+55.50
+      //   → Gemma parte = 111 + (-55.50) = 55.50   Iverson parte = 55.50
+      // Ejemplo desigual: 50 EUR, Gemma=-50, Iverson=+50 (Gemma da efectivo a Iverson)
+      //   → Gemma parte = 50 + (-50) = 0   Iverson parte = 50
+      final splits = memberValues.entries
+          .map((entry) {
+            final csvValue = entry.value;
+            final share = csvValue > 0
+                ? csvValue           // deudor: debe exactamente su valor positivo
+                : cost + csvValue;   // pagador: parte propia = coste − |valor negativo|
+            return Split(
+              memberId: entry.key,
+              shareAmount: share < 0 ? 0 : share,
+              shareType: ShareType.equal,
+            );
+          })
+          .where((s) => s.shareAmount > 0.001) // ignorar partes cero
           .toList();
 
-      final date = dateIndex >= 0 ? _parseDate(row[dateIndex].toString().trim()) ?? now : now;
+      final date = dateIndex >= 0 && dateIndex < row.length
+          ? _parseDate(row[dateIndex].toString().trim()) ?? now
+          : now;
+      final currency = currencyIndex >= 0 && currencyIndex < row.length
+          ? row[currencyIndex].toString().trim()
+          : group.currency;
+      final description = descriptionIndex >= 0 && descriptionIndex < row.length
+          ? row[descriptionIndex].toString().trim()
+          : '';
+      final category = categoryIndex >= 0 && categoryIndex < row.length
+          ? row[categoryIndex].toString().trim()
+          : '';
 
       expensesToImport.add(Expense(
         expenseId: '',
-        description: descriptionIndex >= 0 ? row[descriptionIndex].toString().trim() : '',
+        description: description,
         amount: cost,
-        currency: currencyIndex >= 0 && currencyIndex < row.length
-            ? row[currencyIndex].toString().trim()
-            : group.currency,
-        category: categoryIndex >= 0 ? row[categoryIndex].toString().trim() : '',
+        currency: currency.isEmpty ? group.currency : currency,
+        category: category,
         paidBy: paidBy,
         date: date,
         createdAt: now,
@@ -121,6 +177,10 @@ class ExpensesRepository implements ExpensesRepositoryContract {
     await _remoteDataSource.addExpensesBatch(groupId, expensesToImport);
     return expensesToImport.length;
   }
+
+  @override
+  Future<int> deleteAllExpenses(String groupId) =>
+      _remoteDataSource.deleteAllExpenses(groupId);
 
   String _normalize(String value) => value.trim().toLowerCase();
 

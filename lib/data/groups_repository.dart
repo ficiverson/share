@@ -68,4 +68,12 @@ class GroupsRepository implements GroupsRepositoryContract {
   @override
   Future<void> leaveGroup(String groupId, String uid) =>
       _remoteDataSource.leaveGroup(groupId, uid);
+
+  @override
+  Future<void> updateUserNameInAllGroups(String uid, String name) async {
+    final groups = await _remoteDataSource.getGroups(uid);
+    await Future.wait(
+      groups.map((g) => _remoteDataSource.updateMemberName(g.groupId, uid, name)),
+    );
+  }
 }

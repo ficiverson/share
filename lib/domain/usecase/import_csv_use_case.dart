@@ -3,11 +3,22 @@ import 'package:share_app/domain/repository/expenses_repository_contract.dart';
 import 'package:share_app/domain/result/result.dart';
 
 /// Parámetros para importar un CSV de Splitwise en un grupo.
+///
+/// [columnMapping] es opcional: si se provee, indica qué columna CSV (por
+/// nombre exacto) corresponde a qué miembro (por memberId). Si se omite,
+/// `importCsv` usa la estrategia automática (nombre o posición).
 class ImportCsvParams {
   final String groupId;
   final String csvContent;
 
-  ImportCsvParams({required this.groupId, required this.csvContent});
+  /// Mapeo explícito: csvColumnName → memberId.
+  final Map<String, String>? columnMapping;
+
+  ImportCsvParams({
+    required this.groupId,
+    required this.csvContent,
+    this.columnMapping,
+  });
 }
 
 /// Importa un CSV exportado de Splitwise. Devuelve el número de gastos
@@ -25,7 +36,7 @@ class ImportCsvUseCase extends BaseUseCase<ImportCsvParams, int> {
   Future<Result<int>> _run() async {
     try {
       final p = params!;
-      final count = await repository.importCsv(p.groupId, p.csvContent);
+      final count = await repository.importCsv(p.groupId, p.csvContent, columnMapping: p.columnMapping);
       return Success(count, Status.ok);
     } catch (e) {
       return Error(0, Status.fail, e.toString());

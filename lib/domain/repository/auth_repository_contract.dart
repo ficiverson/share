@@ -16,6 +16,9 @@ abstract class AuthRepositoryContract {
   /// Crea una cuenta nueva con email y contraseña.
   Future<AppUser> signUpWithEmail(String email, String password, String displayName);
 
+  /// Actualiza el nombre visible del usuario en Firebase Auth.
+  Future<void> updateDisplayName(String name);
+
   /// Cierra la sesión actual.
   Future<void> signOut();
 

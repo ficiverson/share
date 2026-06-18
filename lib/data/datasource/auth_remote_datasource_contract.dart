@@ -11,6 +11,8 @@ abstract class AuthRemoteDataSourceContract {
 
   Future<AppUser> signUpWithEmail(String email, String password, String displayName);
 
+  Future<void> updateDisplayName(String name);
+
   Future<void> signOut();
 
   AppUser? getCurrentUser();

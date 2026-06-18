@@ -5,6 +5,43 @@ import 'package:share_app/models/group.dart';
 import 'package:share_app/models/member.dart';
 import 'package:share_app/models/settlement.dart';
 
+/// Convierte un campo Firestore que puede ser `Timestamp` o `String` (ISO) a
+/// `String` ISO, para que los modelos puedan hacer `DateTime.parse()` de forma
+/// segura independientemente de cómo se almacenó el dato.
+String? _toIsoString(dynamic value) {
+  if (value == null) return null;
+  if (value is Timestamp) return value.toDate().toIso8601String();
+  if (value is String) return value;
+  return null;
+}
+
+/// Normaliza los campos de fecha de un mapa de documento Firestore.
+Map<String, dynamic> _normalizeExpenseMap(Map<String, dynamic> data) {
+  final result = Map<String, dynamic>.from(data);
+  result['date'] = _toIsoString(result['date']);
+  result['createdAt'] = _toIsoString(result['createdAt']);
+  return result;
+}
+
+Map<String, dynamic> _normalizeGroupMap(Map<String, dynamic> data) {
+  final result = Map<String, dynamic>.from(data);
+  result['createdAt'] = _toIsoString(result['createdAt']);
+  // Normalizar fechas anidadas en members.<uid>.joinedAt
+  final members = result['members'];
+  if (members is Map) {
+    // Construir explícitamente Map<String, dynamic> para que Group.fromMap
+    // pueda castearlo sin TypeError.
+    final normalized = <String, dynamic>{};
+    for (final entry in members.entries) {
+      final m = Map<String, dynamic>.from(entry.value as Map);
+      m['joinedAt'] = _toIsoString(m['joinedAt']);
+      normalized[entry.key.toString()] = m;
+    }
+    result['members'] = normalized;
+  }
+  return result;
+}
+
 /// Implementación de [FirestoreRemoteDataSourceContract] sobre Cloud
 /// Firestore. Fase 2: grupos. Las operaciones de gastos/liquidaciones se
 /// implementarán en las Fases 3-4.
@@ -29,13 +66,17 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
     return _groups
         .where('memberIds', arrayContains: uid)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Group.fromMap(doc.id, doc.data())).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Group.fromMap(doc.id, _normalizeGroupMap(doc.data())))
+            .toList());
   }
 
   @override
   Future<List<Group>> getGroups(String uid) async {
     final snapshot = await _groups.where('memberIds', arrayContains: uid).get();
-    return snapshot.docs.map((doc) => Group.fromMap(doc.id, doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => Group.fromMap(doc.id, _normalizeGroupMap(doc.data())))
+        .toList();
   }
 
   @override
@@ -45,7 +86,7 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
       if (data == null) {
         throw Exception('El grupo $groupId no existe');
       }
-      return Group.fromMap(doc.id, data);
+      return Group.fromMap(doc.id, _normalizeGroupMap(data));
     });
   }
 
@@ -88,19 +129,28 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
     });
   }
 
+  @override
+  Future<void> updateMemberName(String groupId, String uid, String name) async {
+    await _groups.doc(groupId).update({'members.$uid.name': name});
+  }
+
   // --- expenses (Fase 3) ---
 
   @override
   Stream<List<Expense>> watchExpenses(String groupId) {
     return _expenses(groupId).orderBy('date', descending: true).snapshots().map(
-          (snapshot) => snapshot.docs.map((doc) => Expense.fromMap(doc.id, doc.data())).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) => Expense.fromMap(doc.id, _normalizeExpenseMap(doc.data())))
+              .toList(),
         );
   }
 
   @override
   Future<List<Expense>> getExpenses(String groupId) async {
     final snapshot = await _expenses(groupId).orderBy('date', descending: true).get();
-    return snapshot.docs.map((doc) => Expense.fromMap(doc.id, doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => Expense.fromMap(doc.id, _normalizeExpenseMap(doc.data())))
+        .toList();
   }
 
   @override
@@ -131,6 +181,24 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
   @override
   Future<void> deleteExpense(String groupId, String expenseId) async {
     await _expenses(groupId).doc(expenseId).delete();
+  }
+
+  @override
+  Future<int> deleteAllExpenses(String groupId) async {
+    int deleted = 0;
+    // Firestore no permite borrar una colección entera con una sola llamada;
+    // se leen en batches de 450 y se borran con escritura en batch.
+    while (true) {
+      final snapshot = await _expenses(groupId).limit(450).get();
+      if (snapshot.docs.isEmpty) break;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+        deleted++;
+      }
+      await batch.commit();
+    }
+    return deleted;
   }
 
   @override

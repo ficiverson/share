@@ -36,4 +36,7 @@ abstract class GroupsRepositoryContract {
 
   /// Elimina al usuario indicado (uid) del grupo (de `memberIds` y `members`).
   Future<void> leaveGroup(String groupId, String uid);
+
+  /// Actualiza el campo `name` del miembro (uid) en todos los grupos en los que participa.
+  Future<void> updateUserNameInAllGroups(String uid, String name);
 }

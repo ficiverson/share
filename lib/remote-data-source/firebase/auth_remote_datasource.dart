@@ -118,6 +118,13 @@ class AuthRemoteDataSource implements AuthRemoteDataSourceContract {
   }
 
   @override
+  Future<void> updateDisplayName(String name) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) throw Exception('No hay usuario autenticado');
+    await user.updateDisplayName(name);
+  }
+
+  @override
   Future<void> signOut() => _firebaseAuth.signOut();
 
   @override
