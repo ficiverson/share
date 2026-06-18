@@ -34,6 +34,7 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
       watchGroupsUseCase: injector.watchGroupsUseCase,
       createGroupUseCase: injector.createGroupUseCase,
       joinGroupUseCase: injector.joinGroupUseCase,
+      updateUserProfileUseCase: injector.updateUserProfileUseCase,
     );
     _user = injector.authRepository.getCurrentUser();
     final user = _user;
@@ -81,10 +82,52 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
   }
 
   @override
+  void onProfileUpdated(String name) {
+    setState(() {
+      final u = _user;
+      if (u != null) {
+        _user = AppUser(
+          id: u.id,
+          email: u.email,
+          displayName: name,
+          photoUrl: u.photoUrl,
+        );
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Nombre actualizado a "$name"')),
+    );
+  }
+
+  @override
   void onActionError(String error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error: $error')),
     );
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    final user = _user;
+    if (user == null) return;
+    final nameController = TextEditingController(text: user.displayName);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar nombre'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Nombre'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
+        ],
+      ),
+    );
+    if (result == true && nameController.text.trim().isNotEmpty) {
+      _presenter.updateProfile(user, nameController.text.trim());
+    }
   }
 
   Future<void> _signOut() async {
@@ -175,6 +218,11 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
             icon: const Icon(Icons.group_add),
             tooltip: 'Unirse a un grupo',
             onPressed: _actionLoading ? null : _showJoinGroupDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Editar nombre',
+            onPressed: _actionLoading ? null : _showEditProfileDialog,
           ),
           IconButton(
             icon: const Icon(Icons.logout),

@@ -4,6 +4,7 @@ import 'package:share_app/domain/invoker/invoker.dart';
 import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/create_group_use_case.dart';
 import 'package:share_app/domain/usecase/join_group_use_case.dart';
+import 'package:share_app/domain/usecase/update_user_profile_use_case.dart';
 import 'package:share_app/domain/usecase/watch_groups_use_case.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/user.dart';
@@ -15,6 +16,7 @@ abstract class GroupsViewContract {
   void onActionLoading(bool isLoading);
   void onGroupCreated(Group group);
   void onGroupJoined(Group group);
+  void onProfileUpdated(String name);
   void onActionError(String error);
 }
 
@@ -24,6 +26,7 @@ class GroupsPresenter {
   final WatchGroupsUseCase watchGroupsUseCase;
   final CreateGroupUseCase createGroupUseCase;
   final JoinGroupUseCase joinGroupUseCase;
+  final UpdateUserProfileUseCase updateUserProfileUseCase;
 
   StreamSubscription<List<Group>>? _groupsSubscription;
 
@@ -33,6 +36,7 @@ class GroupsPresenter {
     required this.watchGroupsUseCase,
     required this.createGroupUseCase,
     required this.joinGroupUseCase,
+    required this.updateUserProfileUseCase,
   });
 
   /// Empieza a escuchar en tiempo real los grupos del usuario.
@@ -81,6 +85,22 @@ class GroupsPresenter {
       _view.onActionLoading(false);
       if (result is Success) {
         _view.onGroupJoined(result.getData() as Group);
+      } else {
+        _view.onActionError((result as Error).getError());
+      }
+    });
+  }
+
+  void updateProfile(AppUser user, String name) {
+    _view.onActionLoading(true);
+    invoker
+        .execute(updateUserProfileUseCase.withParams(
+      UpdateUserProfileParams(uid: user.id, name: name),
+    ))
+        .listen((result) {
+      _view.onActionLoading(false);
+      if (result is Success) {
+        _view.onProfileUpdated(name);
       } else {
         _view.onActionError((result as Error).getError());
       }

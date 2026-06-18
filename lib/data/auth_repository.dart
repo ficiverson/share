@@ -26,6 +26,9 @@ class AuthRepository implements AuthRepositoryContract {
       _remoteDataSource.signUpWithEmail(email, password, displayName);
 
   @override
+  Future<void> updateDisplayName(String name) => _remoteDataSource.updateDisplayName(name);
+
+  @override
   Future<void> signOut() => _remoteDataSource.signOut();
 
   @override

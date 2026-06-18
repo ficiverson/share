@@ -10,6 +10,7 @@ import 'package:share_app/domain/repository/balances_repository_contract.dart';
 import 'package:share_app/domain/repository/expenses_repository_contract.dart';
 import 'package:share_app/domain/repository/groups_repository_contract.dart';
 import 'package:share_app/domain/usecase/add_expense_use_case.dart';
+import 'package:share_app/domain/usecase/delete_all_expenses_use_case.dart';
 import 'package:share_app/domain/usecase/calculate_balances_use_case.dart';
 import 'package:share_app/domain/usecase/create_group_use_case.dart';
 import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
@@ -21,6 +22,7 @@ import 'package:share_app/domain/usecase/join_group_use_case.dart';
 import 'package:share_app/domain/usecase/leave_group_use_case.dart';
 import 'package:share_app/domain/usecase/settle_up_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_apple_use_case.dart';
+import 'package:share_app/domain/usecase/update_user_profile_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_email_use_case.dart';
 import 'package:share_app/domain/usecase/sign_in_with_google_use_case.dart';
 import 'package:share_app/domain/usecase/sign_out_use_case.dart';
@@ -87,6 +89,11 @@ class DependencyInjector {
   GetCurrentUserUseCase get getCurrentUserUseCase =>
       GetCurrentUserUseCase(repository: authRepository);
 
+  UpdateUserProfileUseCase get updateUserProfileUseCase => UpdateUserProfileUseCase(
+        authRepository: authRepository,
+        groupsRepository: groupsRepository,
+      );
+
   // --- Casos de uso de grupos (Fase 2) ---
   CreateGroupUseCase get createGroupUseCase => CreateGroupUseCase(repository: groupsRepository);
 
@@ -108,6 +115,9 @@ class DependencyInjector {
       DeleteExpenseUseCase(repository: expensesRepository);
 
   ImportCsvUseCase get importCsvUseCase => ImportCsvUseCase(repository: expensesRepository);
+
+  DeleteAllExpensesUseCase get deleteAllExpensesUseCase =>
+      DeleteAllExpensesUseCase(repository: expensesRepository);
 
   // --- Casos de uso de balances/liquidaciones (Fase 4) ---
   GetBalancesUseCase get getBalancesUseCase => GetBalancesUseCase(repository: balancesRepository);

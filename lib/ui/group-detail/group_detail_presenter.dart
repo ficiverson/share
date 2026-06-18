@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:share_app/domain/invoker/invoker.dart';
 import 'package:share_app/domain/repository/groups_repository_contract.dart';
 import 'package:share_app/domain/result/result.dart';
+import 'package:share_app/domain/usecase/delete_all_expenses_use_case.dart';
 import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
 import 'package:share_app/domain/usecase/import_csv_use_case.dart';
 import 'package:share_app/domain/usecase/leave_group_use_case.dart';
@@ -18,6 +19,7 @@ abstract class GroupDetailViewContract {
   void onExpensesError(String error);
   void onActionLoading(bool isLoading);
   void onExpenseDeleted();
+  void onAllExpensesDeleted(int count);
   void onCsvImported(int count);
   void onActionError(String error);
   void onGroupLeft();
@@ -29,6 +31,7 @@ class GroupDetailPresenter {
   final Invoker invoker;
   final WatchExpensesUseCase watchExpensesUseCase;
   final DeleteExpenseUseCase deleteExpenseUseCase;
+  final DeleteAllExpensesUseCase deleteAllExpensesUseCase;
   final ImportCsvUseCase importCsvUseCase;
   final LeaveGroupUseCase leaveGroupUseCase;
 
@@ -41,6 +44,7 @@ class GroupDetailPresenter {
     required this.invoker,
     required this.watchExpensesUseCase,
     required this.deleteExpenseUseCase,
+    required this.deleteAllExpensesUseCase,
     required this.importCsvUseCase,
     required this.leaveGroupUseCase,
   });
@@ -76,11 +80,23 @@ class GroupDetailPresenter {
     });
   }
 
-  void importCsv(String groupId, String csvContent) {
+  void deleteAllExpenses(String groupId) {
+    _view.onActionLoading(true);
+    invoker.execute(deleteAllExpensesUseCase.withParams(groupId)).listen((result) {
+      _view.onActionLoading(false);
+      if (result is Success) {
+        _view.onAllExpensesDeleted(result.getData() as int);
+      } else {
+        _view.onActionError((result as Error).getError());
+      }
+    });
+  }
+
+  void importCsv(String groupId, String csvContent, {Map<String, String>? columnMapping}) {
     _view.onActionLoading(true);
     invoker
         .execute(importCsvUseCase.withParams(
-      ImportCsvParams(groupId: groupId, csvContent: csvContent),
+      ImportCsvParams(groupId: groupId, csvContent: csvContent, columnMapping: columnMapping),
     ))
         .listen((result) {
       _view.onActionLoading(false);

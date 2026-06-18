@@ -131,3 +131,11 @@ español en toda la UI, ver `lib/translations/PENDING.md`), pulido visual
 general, pruebas en Android/iOS (ya se generaron los proyectos de
 plataforma con `flutter create .`), y reglas de seguridad de Firestore
 definitivas (ver sección "Modelo de datos en Firestore" más arriba).
+
+
+## Mejoras futuras
+
+colores por gasto rojo verde
+paginacion gastos para cargar los primeros 50 y con el scroll los siguients 50 etc
+boton para volver al principio del scroll al alado del de añadir gasto
+iconos por tipo de gasto

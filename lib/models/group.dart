@@ -37,7 +37,10 @@ class Group {
       };
 
   factory Group.fromMap(String groupId, Map<String, dynamic> map) {
-    final membersMap = (map['members'] as Map<String, dynamic>?) ?? {};
+    final membersRaw = map['members'];
+    final membersMap = membersRaw is Map
+        ? Map<String, dynamic>.from(membersRaw)
+        : <String, dynamic>{};
     return Group(
       groupId: groupId,
       name: map['name'] as String? ?? '',

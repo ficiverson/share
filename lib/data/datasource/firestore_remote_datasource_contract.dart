@@ -21,6 +21,8 @@ abstract class FirestoreRemoteDataSourceContract {
 
   Future<void> leaveGroup(String groupId, String uid);
 
+  Future<void> updateMemberName(String groupId, String uid, String name);
+
   // --- expenses ---
   Stream<List<Expense>> watchExpenses(String groupId);
 
@@ -33,6 +35,8 @@ abstract class FirestoreRemoteDataSourceContract {
   Future<void> deleteExpense(String groupId, String expenseId);
 
   Future<void> addExpensesBatch(String groupId, List<Expense> expenses);
+
+  Future<int> deleteAllExpenses(String groupId);
 
   // --- settlements ---
   Stream<List<Settlement>> watchSettlements(String groupId);

@@ -18,5 +18,11 @@ abstract class ExpensesRepositoryContract {
   /// Importa un CSV exportado de Splitwise (ver sección 4 del plan):
   /// `Fecha, Descripción, Categoría, Coste, Moneda, <Miembro 1>, <Miembro 2>, ...`
   /// y crea un documento de gasto (con sus `splits`) por cada fila.
-  Future<int> importCsv(String groupId, String csvContent);
+  ///
+  /// Si se pasa [columnMapping] (csvColumnName → memberId), se usa ese mapeo
+  /// explícito en lugar de la detección automática por nombre/posición.
+  Future<int> importCsv(String groupId, String csvContent, {Map<String, String>? columnMapping});
+
+  /// Borra TODOS los gastos del grupo. Devuelve el número de gastos eliminados.
+  Future<int> deleteAllExpenses(String groupId);
 }
