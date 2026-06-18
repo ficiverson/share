@@ -5,6 +5,8 @@ import 'package:share_app/models/user.dart';
 abstract class AuthRemoteDataSourceContract {
   Future<AppUser> signInWithGoogle();
 
+  Future<AppUser> signInWithApple();
+
   Future<AppUser> signInWithEmail(String email, String password);
 
   Future<AppUser> signUpWithEmail(String email, String password, String displayName);
