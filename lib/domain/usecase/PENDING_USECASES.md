@@ -16,8 +16,9 @@ Ya implementados (Fase 3 - gastos): `watch_expenses_use_case.dart`,
 también lista los gastos en tiempo real, permite borrarlos y tiene un botón
 para importar un CSV de Splitwise).
 
-Pendientes (Fase 4), siguen el mismo patrón `BaseUseCase<P, T>`, sobre
-Cloud Firestore (ver `firestore_remote_datasource_contract.dart`):
-- `get_balances_use_case.dart`
-- `calculate_balances_use_case.dart` (algoritmo puro Dart, sección 6 del plan)
-- `settle_up_use_case.dart`
+Ya implementados (Fase 4 - balances y liquidaciones): `get_balances_use_case.dart`,
+`calculate_balances_use_case.dart` (algoritmo de simplificación de deudas,
+`CalculateBalancesUseCase.simplifyDebts`), `watch_settlements_use_case.dart`,
+`settle_up_use_case.dart`. UI real en `ui/balances` (balance neto por
+miembro y lista "quién debe a quién" con botón "Liquidar"), accesible desde
+`ui/group-detail`.

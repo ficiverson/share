@@ -7,6 +7,7 @@ import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/member.dart';
+import 'package:share_app/ui/balances/balances_router.dart';
 import 'package:share_app/ui/expenses/expense_form_router.dart';
 import 'package:share_app/ui/group-detail/group_detail_presenter.dart';
 import 'package:share_app/utils/share_colors.dart';
@@ -230,6 +231,11 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
       appBar: AppBar(
         title: Text(group?.name ?? 'Grupo'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet),
+            tooltip: 'Ver saldos',
+            onPressed: group == null ? null : () => BalancesRouter.open(context, group),
+          ),
           IconButton(
             icon: const Icon(Icons.upload_file),
             tooltip: 'Importar CSV de Splitwise',

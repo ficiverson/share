@@ -18,8 +18,10 @@ dependencies:
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.0
 
-  # Login con Google (credenciales pasadas a Firebase Auth)
+  # Login con Google/Apple (credenciales pasadas a Firebase Auth)
   google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.2
+  crypto: ^3.0.3
 
   # Utilidades
   intl: ^0.19.0

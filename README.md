@@ -36,14 +36,17 @@ Implementado (Fase 0 + Fase 1 + Fase 2 + Fase 3):
   `file_picker` para leer un CSV exportado de Splitwise y crear un gasto por
   fila (ver detalles del mapeo de columnas en
   `lib/data/expenses_repository.dart`).
-- Contratos de repositorio/datasource para la Fase 4 (balances/
-  liquidaciones) ya definidos en `domain/repository/balances_repository_contract.dart`
-  y `data/datasource/firestore_remote_datasource_contract.dart`, modelados
-  sobre la subcolección `groups/{groupId}/settlements` (`addSettlement` y
-  `watchSettlements` ya implementados en el datasource).
+- Balances y liquidaciones sobre Cloud Firestore (`groups/{groupId}/settlements`):
+  `BalancesRepository` (`getBalances` calcula el balance neto de cada
+  miembro a partir de `expenses`+`splits`+`settlements`), casos de uso
+  `get_balances`, `calculate_balances` (simplificación de deudas, "quién
+  debe a quién" con el mínimo de transferencias), `watch_settlements`,
+  `settle_up`. UI real en `ui/balances` (balance neto por miembro,
+  coloreado, y lista de transferencias sugeridas con botón "Liquidar"),
+  accesible desde `ui/group-detail` mediante el icono de saldo.
 
 Pendiente (ver `PENDING.md`/`PENDING_USECASES.md` en cada carpeta): Fases
-4-7 (balances/liquidaciones, pulido, móvil).
+5-7 (pulido, i18n, móvil).
 
 ## Modelo de datos en Firestore
 
@@ -123,10 +126,8 @@ máquina:
 
 ## Siguiente paso recomendado
 
-Fase 4 (balances y liquidaciones): implementar `BalancesRepository`
-(`getBalances` a partir de `expenses` + `splits` + `settlements`,
-`watchSettlements`, `settleUp` ya soportado por el datasource), el algoritmo
-`calculate_balances_use_case.dart` (sección 6 del plan: balance neto por
-miembro y simplificación de deudas con `DebtTransfer`), y la UI de
-`ui/balances` (pantalla "quién debe a quién" + registro de liquidaciones),
-accesible desde `ui/group-detail`.
+Fase 5 (pulido / i18n / móvil): revisar internacionalización (textos en
+español en toda la UI, ver `lib/translations/PENDING.md`), pulido visual
+general, pruebas en Android/iOS (ya se generaron los proyectos de
+plataforma con `flutter create .`), y reglas de seguridad de Firestore
+definitivas (ver sección "Modelo de datos en Firestore" más arriba).
