@@ -121,23 +121,28 @@ class ExpensesRepository implements ExpensesRepositoryContract {
       }
       if (memberValues.isEmpty) continue;
 
-      // En Splitwise, el pagador tiene el valor MÁS NEGATIVO (le deben dinero).
-      final paidBy = memberValues.entries.reduce((a, b) => a.value <= b.value ? a : b).key;
-
-      // Los valores del CSV representan el cambio de balance neto de cada persona:
-      //   valor > 0 → debe esa cantidad (su parte del gasto)
-      //   valor < 0 → pagó; su propia parte = coste + valor_negativo (puede ser 0)
+      // En Splitwise, el pagador tiene el valor MÁS POSITIVO:
+      // el CSV muestra el crédito/débito neto de cada persona por gasto.
+      //   valor > 0 → pagó (crédito neto: pagó más de lo que le corresponde)
+      //   valor < 0 → debe (débito neto: debe exactamente |valor|)
       //
-      // Ejemplo igual:  111 EUR, Gemma=-55.50, Iverson=+55.50
-      //   → Gemma parte = 111 + (-55.50) = 55.50   Iverson parte = 55.50
-      // Ejemplo desigual: 50 EUR, Gemma=-50, Iverson=+50 (Gemma da efectivo a Iverson)
-      //   → Gemma parte = 50 + (-50) = 0   Iverson parte = 50
+      // Nota: la suma de todas las columnas de miembro para una fila es 0.
+      final paidBy = memberValues.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+
+      // Cálculo de la parte de cada persona:
+      //   deudor (valor < 0): debe exactamente |valor|
+      //   pagador (valor > 0): parte propia = coste − crédito_neto
+      //
+      // Ejemplo igual:  111 EUR, Gemma=+55.50, Iverson=-55.50
+      //   → Gemma parte = 111 − 55.50 = 55.50   Iverson parte = 55.50
+      // Ejemplo desigual: 50 EUR, Gemma=+50, Iverson=-50 (Gemma da efectivo a Iverson)
+      //   → Gemma parte = 50 − 50 = 0   Iverson parte = 50
       final splits = memberValues.entries
           .map((entry) {
             final csvValue = entry.value;
-            final share = csvValue > 0
-                ? csvValue           // deudor: debe exactamente su valor positivo
-                : cost + csvValue;   // pagador: parte propia = coste − |valor negativo|
+            final share = csvValue < 0
+                ? -csvValue            // deudor: debe exactamente el valor absoluto
+                : cost - csvValue;     // pagador: parte propia = coste − crédito_neto
             return Split(
               memberId: entry.key,
               shareAmount: share < 0 ? 0 : share,

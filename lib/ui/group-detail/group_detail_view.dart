@@ -13,6 +13,7 @@ import 'package:share_app/ui/balances/balances_router.dart';
 import 'package:share_app/ui/csv_mapping/csv_mapping_dialog.dart';
 import 'package:share_app/ui/expenses/expense_form_router.dart';
 import 'package:share_app/ui/group-detail/group_detail_presenter.dart';
+import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
 
 /// Pantalla de detalle de un grupo: datos del grupo, `groupId` (para
@@ -29,14 +30,33 @@ class GroupDetailView extends StatefulWidget {
 
 class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetailViewContract {
   late final GroupDetailPresenter _presenter;
+  late final ScrollController _scrollController;
+
   Group? _group;
   List<Expense>? _expenses;
   String? _error;
   bool _actionLoading = false;
 
+  /// Número de gastos que se muestran en pantalla (paginación cliente).
+  int _displayLimit = 50;
+
+  /// Controla la visibilidad del botón de volver al principio.
+  bool _showScrollToTop = false;
+
+  // ─── helpers de paginación ───────────────────────────────────────────────
+
+  List<Expense> get _displayedExpenses =>
+      _expenses == null ? const [] : _expenses!.take(_displayLimit).toList();
+
+  bool get _hasMore => (_expenses?.length ?? 0) > _displayLimit;
+
+  // ─── lifecycle ───────────────────────────────────────────────────────────
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
+
     final injector = DependencyInjector.instance;
     _presenter = GroupDetailPresenter(
       this,
@@ -53,9 +73,40 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _presenter.dispose();
     super.dispose();
   }
+
+  void _onScroll() {
+    final pos = _scrollController.position;
+
+    // Cargar más gastos al acercarse al final del scroll.
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      _loadMoreExpenses();
+    }
+
+    // Mostrar / ocultar botón de volver al principio.
+    final shouldShow = pos.pixels > 300;
+    if (shouldShow != _showScrollToTop) {
+      setState(() => _showScrollToTop = shouldShow);
+    }
+  }
+
+  void _loadMoreExpenses() {
+    if (!_hasMore) return;
+    setState(() => _displayLimit += 50);
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // ─── GroupDetailViewContract ──────────────────────────────────────────────
 
   @override
   void onGroupChanged(Group group) {
@@ -92,6 +143,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
 
   @override
   void onAllExpensesDeleted(int count) {
+    setState(() => _displayLimit = 50);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$count gastos eliminados')),
     );
@@ -113,6 +165,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
   void onGroupLeft() {
     if (mounted) Navigator.of(context).pop();
   }
+
+  // ─── acciones ─────────────────────────────────────────────────────────────
 
   void _copyGroupId() {
     Clipboard.setData(ClipboardData(text: widget.groupId));
@@ -188,7 +242,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                       Clipboard.setData(ClipboardData(text: message));
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Mensaje copiado — pégalo en WhatsApp/etc.')),
+                        const SnackBar(
+                            content: Text('Mensaje copiado — pégalo en WhatsApp/etc.')),
                       );
                     },
                   ),
@@ -207,6 +262,17 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (group == null) return memberId;
     final member = group.members.where((m) => m.memberId == memberId);
     return member.isEmpty ? memberId : member.first.name;
+  }
+
+  /// Devuelve el color del importe de un gasto según la relación del usuario
+  /// actual con él: verde si pagó (le deben), rojo si debe parte del gasto.
+  Color? _expenseAmountColor(Expense expense, String? uid) {
+    if (uid == null) return null;
+    if (expense.paidBy == uid) return ShareColors.positive;
+    final inSplits =
+        expense.splits.any((s) => s.memberId == uid && s.shareAmount > 0.001);
+    if (inSplits) return ShareColors.negative;
+    return null;
   }
 
   Future<void> _confirmDeleteAllExpenses() async {
@@ -251,11 +317,15 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Salir del grupo'),
-        content: const Text('¿Seguro que quieres salir de este grupo? Perderás el acceso a sus gastos.'),
+        content: const Text(
+            '¿Seguro que quieres salir de este grupo? Perderás el acceso a sus gastos.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: ShareColors.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: ShareColors.error, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Salir'),
           ),
@@ -286,8 +356,12 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
         title: const Text('Borrar gasto'),
         content: Text('¿Borrar "${expense.description}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Borrar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Borrar')),
         ],
       ),
     );
@@ -296,7 +370,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     }
   }
 
-  /// Extrae los nombres de columnas de miembro del CSV de Splitwise.
+  /// Extrae los nombres de columna de miembro del CSV de Splitwise.
   /// Formato de cabecera: Fecha, Descripción, Categoría, Coste, Moneda, <M1>, <M2>...
   List<String> _parseCsvMemberColumns(String csvContent) {
     final normalized = csvContent.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
@@ -304,7 +378,13 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (lines.isEmpty) return [];
     final header = lines.first.split(',').map((c) => c.trim()).toList();
     const fixedColumns = {
-      'fecha', 'descripción', 'descripcion', 'categoría', 'categoria', 'coste', 'moneda'
+      'fecha',
+      'descripción',
+      'descripcion',
+      'categoría',
+      'categoria',
+      'coste',
+      'moneda'
     };
     return header
         .where((h) => !fixedColumns.contains(h.trim().toLowerCase()))
@@ -324,7 +404,6 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (fileBytes == null) return;
     final csvContent = utf8.decode(fileBytes);
 
-    // Parsear cabecera y mostrar diálogo de asignación de columnas.
     final csvColumns = _parseCsvMemberColumns(csvContent);
     if (!mounted) return;
 
@@ -335,19 +414,19 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
         csvColumns: csvColumns,
         members: group.members,
       );
-      // Si el usuario cancela el diálogo, no importar.
       if (columnMapping == null) return;
     }
 
     _presenter.importCsv(widget.groupId, csvContent, columnMapping: columnMapping);
   }
 
+  // ─── widgets ──────────────────────────────────────────────────────────────
+
   Widget _buildSummaryCard(Group group) {
     final expenses = _expenses ?? [];
     final totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
     final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
 
-    // Compute current user's net: total paid - total owed
     double userPaid = 0;
     double userOwed = 0;
     if (uid != null) {
@@ -380,13 +459,16 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Total gastado', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                  const Text('Total gastado',
+                      style: TextStyle(fontSize: 12, color: Colors.black54)),
                   Text(
                     '${totalSpent.toStringAsFixed(2)} ${group.currency}',
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
-                  Text('${expenses.length} gasto${expenses.length == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                  Text(
+                    '${expenses.length} gasto${expenses.length == 1 ? '' : 's'}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
                 ],
               ),
             ),
@@ -394,11 +476,14 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text('Tu balance', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                  const Text('Tu balance',
+                      style: TextStyle(fontSize: 12, color: Colors.black54)),
                   Text(
                     netLabel,
                     style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold, color: netColor ?? Colors.black87),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: netColor ?? Colors.black87),
                   ),
                 ],
               ),
@@ -442,6 +527,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
 
   Widget _buildExpenses(Group group) {
     final expenses = _expenses;
+    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -466,27 +553,71 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
               ],
             ),
           )
-        else
-          ...expenses.map((expense) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.receipt_long, color: ShareColors.primary),
-                  title: Text(expense.description.isEmpty ? '(sin descripción)' : expense.description),
-                  subtitle: Text(
-                    'Pagado por ${_memberName(expense.paidBy)} · '
-                    '${DateFormat('d MMM yyyy', 'es').format(expense.date)}'
-                    '${expense.category.isNotEmpty ? ' · ${expense.category}' : ''}',
+        else ...[
+          ..._displayedExpenses.map((expense) => _buildExpenseTile(expense, uid)),
+
+          // Indicador de paginación o fin de lista.
+          if (_hasMore)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.expand_more),
+                  label: Text(
+                    'Mostrando ${_displayedExpenses.length} de ${expenses.length}  •  Scroll para ver más',
+                    style: const TextStyle(color: Colors.black45, fontSize: 12),
                   ),
-                  trailing: Text(
-                    '${expense.amount.toStringAsFixed(2)} ${expense.currency}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onTap: () => _editExpense(expense),
-                  onLongPress: () => _deleteExpense(expense),
+                  onPressed: _loadMoreExpenses,
                 ),
-              )),
+              ),
+            )
+          else if (expenses.length > 50)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Center(
+                child: Text(
+                  '${expenses.length} gastos en total',
+                  style: const TextStyle(color: Colors.black38, fontSize: 12),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
+
+  Widget _buildExpenseTile(Expense expense, String? uid) {
+    final amountColor = _expenseAmountColor(expense, uid);
+    final icon = ExpenseCategory.icon(expense.category);
+
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: ShareColors.primary.withValues(alpha: 0.10),
+          child: Icon(icon, color: ShareColors.primary, size: 20),
+        ),
+        title: Text(
+          expense.description.isEmpty ? '(sin descripción)' : expense.description,
+        ),
+        subtitle: Text(
+          'Pagado por ${_memberName(expense.paidBy)} · '
+          '${DateFormat('d MMM yyyy', 'es').format(expense.date)}'
+          '${expense.category.isNotEmpty ? ' · ${expense.category}' : ''}',
+        ),
+        trailing: Text(
+          '${expense.amount.toStringAsFixed(2)} ${expense.currency}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: amountColor,
+          ),
+        ),
+        onTap: () => _editExpense(expense),
+        onLongPress: () => _deleteExpense(expense),
+      ),
+    );
+  }
+
+  // ─── build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +653,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                   children: [
                     Icon(Icons.delete_sweep, color: ShareColors.error),
                     SizedBox(width: 8),
-                    Text('Borrar todos los gastos', style: TextStyle(color: ShareColors.error)),
+                    Text('Borrar todos los gastos',
+                        style: TextStyle(color: ShareColors.error)),
                   ],
                 ),
               ),
@@ -549,6 +681,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                     if (_actionLoading) const LinearProgressIndicator(),
                     Expanded(
                       child: ListView(
+                        controller: _scrollController,
                         padding: const EdgeInsets.all(16),
                         children: [
                           _buildSummaryCard(group),
@@ -560,12 +693,32 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                     ),
                   ],
                 ),
+
+      // Dos FABs: volver al principio (pequeño, condicional) + añadir gasto.
       floatingActionButton: group == null
           ? null
-          : FloatingActionButton(
-              onPressed: _actionLoading ? null : _addExpense,
-              tooltip: 'Añadir gasto',
-              child: const Icon(Icons.add),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_showScrollToTop) ...[
+                  FloatingActionButton.small(
+                    heroTag: 'scrollTop',
+                    onPressed: _scrollToTop,
+                    backgroundColor: Colors.white,
+                    foregroundColor: ShareColors.primary,
+                    tooltip: 'Volver al principio',
+                    child: const Icon(Icons.keyboard_arrow_up),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                FloatingActionButton(
+                  heroTag: 'addExpense',
+                  onPressed: _actionLoading ? null : _addExpense,
+                  tooltip: 'Añadir gasto',
+                  child: const Icon(Icons.add),
+                ),
+              ],
             ),
     );
   }
@@ -581,8 +734,11 @@ class _MemberTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: member.photoUrl != null ? NetworkImage(member.photoUrl!) : null,
-          child: member.photoUrl == null ? Text(member.name.isNotEmpty ? member.name[0] : '?') : null,
+          backgroundImage:
+              member.photoUrl != null ? NetworkImage(member.photoUrl!) : null,
+          child: member.photoUrl == null
+              ? Text(member.name.isNotEmpty ? member.name[0] : '?')
+              : null,
         ),
         title: Text(member.name),
         subtitle: Text(member.email),

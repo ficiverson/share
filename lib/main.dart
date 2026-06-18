@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:share_app/injector/dependency_injector.dart';
+import 'package:share_app/translations/app_localizations_delegate.dart';
 import 'package:share_app/ui/login/login_router.dart';
 import 'package:share_app/utils/share_colors.dart';
 
@@ -24,6 +25,7 @@ class ShareApp extends StatelessWidget {
       locale: const Locale('es'),
       supportedLocales: const [Locale('es'), Locale('en')],
       localizationsDelegates: const [
+        AppLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
