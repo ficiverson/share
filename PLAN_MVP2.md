@@ -10,7 +10,6 @@ Features delivered en MVP 1 y que quedan para la siguiente iteración.
 
 - **Detalle de un gasto** — pantalla individual que muestra descripción, importe, pagador, fecha, categoría, notas y reparto entre miembros.
 - **Split personalizado** — al crear/editar un gasto, permitir indicar manualmente cuánto paga cada miembro en lugar del reparto igual automático.
-- **Adjuntar foto del ticket** — subir imagen desde cámara o galería y asociarla al gasto (Firebase Storage).
 - **Filtrar/buscar gastos** — barra de búsqueda por descripción, categoría o rango de fechas dentro de la lista de gastos.
 - **Exportar gastos a CSV** — generar y compartir un fichero CSV con todos los gastos del grupo (inverso a la importación de Splitwise).
 

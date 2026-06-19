@@ -9,7 +9,8 @@ class Expense {
   final double amount;
   final String currency;
   final String category;
-  final String paidBy; // memberId (uid)
+  final String paidBy;    // memberId (uid) del pagador
+  final String createdBy; // uid del usuario que registró el gasto (para notificaciones)
   final DateTime date;
   final DateTime createdAt;
   final String notes;
@@ -22,6 +23,7 @@ class Expense {
     required this.currency,
     required this.category,
     required this.paidBy,
+    this.createdBy = '',
     required this.date,
     required this.createdAt,
     this.notes = '',
@@ -34,6 +36,7 @@ class Expense {
         'currency': currency,
         'category': category,
         'paidBy': paidBy,
+        'createdBy': createdBy,
         'date': date.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
         'notes': notes,
@@ -47,6 +50,7 @@ class Expense {
         currency: map['currency'] as String? ?? 'EUR',
         category: map['category'] as String? ?? '',
         paidBy: map['paidBy'] as String? ?? '',
+        createdBy: map['createdBy'] as String? ?? '',
         date: map['date'] != null ? DateTime.parse(map['date'] as String) : DateTime.now(),
         createdAt: map['createdAt'] != null
             ? DateTime.parse(map['createdAt'] as String)

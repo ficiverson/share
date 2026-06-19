@@ -12,6 +12,7 @@ import 'package:share_app/models/settlement.dart';
 /// Vista abstracta que implementa el widget `BalancesView`.
 abstract class BalancesViewContract {
   void onBalancesChanged(List<MemberBalance> balances, List<DebtTransfer> transfers);
+  void onSettlementsChanged(List<Settlement> settlements);
   void onBalancesError(String error);
   void onSettling(bool isSettling);
   void onSettled(Settlement settlement);
@@ -45,7 +46,8 @@ class BalancesPresenter {
     _loadBalances(groupId);
 
     _settlementsSubscription?.cancel();
-    _settlementsSubscription = watchSettlementsUseCase.watch(groupId).listen((_) {
+    _settlementsSubscription = watchSettlementsUseCase.watch(groupId).listen((settlements) {
+      _view.onSettlementsChanged(settlements);
       _loadBalances(groupId);
     });
   }

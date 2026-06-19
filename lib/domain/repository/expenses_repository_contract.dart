@@ -1,4 +1,5 @@
 import 'package:share_app/models/expense.dart';
+import 'package:share_app/models/group.dart';
 
 /// Contrato del repositorio de gastos. Implementado en
 /// `data/expenses_repository.dart` (Fase 3) sobre la subcolección
@@ -25,4 +26,7 @@ abstract class ExpensesRepositoryContract {
 
   /// Borra TODOS los gastos del grupo. Devuelve el número de gastos eliminados.
   Future<int> deleteAllExpenses(String groupId);
+
+  /// Genera un CSV con todos los gastos del grupo y lo devuelve como String.
+  String exportCsv(Group group, List<Expense> expenses);
 }

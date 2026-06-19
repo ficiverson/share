@@ -22,6 +22,8 @@ class ShareApp extends StatelessWidget {
       title: 'Share',
       debugShowCheckedModeBanner: false,
       theme: ShareColors.theme(),
+      darkTheme: ShareColors.darkTheme(),
+      themeMode: ThemeMode.system,
       locale: const Locale('es'),
       supportedLocales: const [Locale('es'), Locale('en')],
       localizationsDelegates: const [

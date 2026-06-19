@@ -31,4 +31,27 @@ class ShareColors {
       ),
     );
   }
+
+  static ThemeData darkTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primary,
+        brightness: Brightness.dark,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF0E8C72),
+        foregroundColor: Colors.white,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
 }
