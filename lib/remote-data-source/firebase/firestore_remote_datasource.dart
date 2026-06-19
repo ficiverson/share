@@ -49,7 +49,9 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
   final FirebaseFirestore _firestore;
 
   FirestoreRemoteDataSource({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _firestore = firestore ?? FirebaseFirestore.instance {
+    _firestore.settings = const Settings(persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+  }
 
   CollectionReference<Map<String, dynamic>> get _groups => _firestore.collection('groups');
 
@@ -132,6 +134,37 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
   @override
   Future<void> updateMemberName(String groupId, String uid, String name) async {
     await _groups.doc(groupId).update({'members.$uid.name': name});
+  }
+
+  @override
+  Future<void> updateGroup(String groupId, {required String name, required String currency}) async {
+    await _groups.doc(groupId).update({'name': name, 'currency': currency});
+  }
+
+  @override
+  Future<void> deleteGroup(String groupId) async {
+    // 1. Borrar subcolección expenses en batches.
+    while (true) {
+      final snap = await _expenses(groupId).limit(450).get();
+      if (snap.docs.isEmpty) break;
+      final batch = _firestore.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    // 2. Borrar subcolección settlements en batches.
+    while (true) {
+      final snap = await _settlements(groupId).limit(450).get();
+      if (snap.docs.isEmpty) break;
+      final batch = _firestore.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    // 3. Borrar el documento del grupo.
+    await _groups.doc(groupId).delete();
   }
 
   // --- expenses (Fase 3) ---
@@ -253,5 +286,34 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
     );
     await docRef.set(newSettlement.toMap());
     return newSettlement;
+  }
+
+  // --- notifications ---
+
+  CollectionReference<Map<String, dynamic>> _pending(String uid) =>
+      _firestore.collection('notifications').doc(uid).collection('pending');
+
+  @override
+  Future<void> sendNotificationToUser(
+      String recipientUid, Map<String, dynamic> payload) async {
+    await _pending(recipientUid).add({
+      ...payload,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Stream<List<Map<String, dynamic>>> watchPendingNotifications(String uid) {
+    return _pending(uid)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => {'id': doc.id, ...doc.data()})
+            .toList());
+  }
+
+  @override
+  Future<void> deleteNotification(String uid, String notificationId) async {
+    await _pending(uid).doc(notificationId).delete();
   }
 }

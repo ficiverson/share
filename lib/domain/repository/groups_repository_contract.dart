@@ -39,4 +39,10 @@ abstract class GroupsRepositoryContract {
 
   /// Actualiza el campo `name` del miembro (uid) en todos los grupos en los que participa.
   Future<void> updateUserNameInAllGroups(String uid, String name);
+
+  /// Actualiza el nombre y la moneda del grupo.
+  Future<void> updateGroup(String groupId, {required String name, required String currency});
+
+  /// Borra el grupo completo: gastos, liquidaciones y documento.
+  Future<void> deleteGroup(String groupId);
 }

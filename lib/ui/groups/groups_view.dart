@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/user.dart';
+import 'package:share_app/services/local_notification_service.dart';
 import 'package:share_app/ui/group-detail/group_detail_router.dart';
 import 'package:share_app/ui/groups/groups_presenter.dart';
 import 'package:share_app/ui/login/login_router.dart';
@@ -24,6 +27,8 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
   bool _actionLoading = false;
   bool _signingOut = false;
 
+  StreamSubscription<List<Map<String, dynamic>>>? _notificationSub;
+
   @override
   void initState() {
     super.initState();
@@ -40,11 +45,30 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
     final user = _user;
     if (user != null) {
       _presenter.watchGroups(user);
+      _startNotificationListener(user.id);
     }
+  }
+
+  /// Escucha `notifications/{uid}/pending/` y muestra cada notificación
+  /// pendiente como notificación local del sistema, luego la borra.
+  void _startNotificationListener(String uid) {
+    final ds = DependencyInjector.instance.firestoreDataSource;
+    _notificationSub = ds.watchPendingNotifications(uid).listen((docs) async {
+      for (final doc in docs) {
+        final id = doc['id'] as String?;
+        final title = doc['title'] as String? ?? 'Share';
+        final body = doc['body'] as String? ?? '';
+        await LocalNotificationService.instance.show(title: title, body: body);
+        if (id != null) {
+          try { await ds.deleteNotification(uid, id); } catch (_) {}
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _notificationSub?.cancel();
     _presenter.dispose();
     super.dispose();
   }

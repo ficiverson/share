@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:share_app/data/datasource/firestore_remote_datasource_contract.dart';
 import 'package:share_app/domain/repository/expenses_repository_contract.dart';
 import 'package:share_app/models/expense.dart';
+import 'package:share_app/models/group.dart';
 import 'package:share_app/models/split.dart';
 
 /// Implementación de [ExpensesRepositoryContract] sobre Cloud Firestore.
@@ -186,6 +187,43 @@ class ExpensesRepository implements ExpensesRepositoryContract {
   @override
   Future<int> deleteAllExpenses(String groupId) =>
       _remoteDataSource.deleteAllExpenses(groupId);
+
+  @override
+  String exportCsv(Group group, List<Expense> expenses) {
+    final members = group.members;
+
+    // Cabecera: Date, Description, Category, Cost, Currency, paidBy, <member 1>, <member 2>, ...
+    final header = [
+      'Date',
+      'Description',
+      'Category',
+      'Cost',
+      'Currency',
+      'PaidBy',
+      ...members.map((m) => m.displayName),
+    ];
+
+    final rows = <List<dynamic>>[header];
+
+    for (final e in expenses) {
+      final row = <dynamic>[
+        e.date.toIso8601String().substring(0, 10), // yyyy-MM-dd
+        e.description,
+        e.category,
+        e.amount.toStringAsFixed(2),
+        e.currency,
+        members.firstWhere((m) => m.id == e.paidBy, orElse: () => members.first).displayName,
+        // columna por miembro: su share o 0
+        ...members.map((m) {
+          final split = e.splits.where((s) => s.memberId == m.id).fold(0.0, (sum, s) => sum + s.shareAmount);
+          return split.toStringAsFixed(2);
+        }),
+      ];
+      rows.add(row);
+    }
+
+    return const ListToCsvConverter().convert(rows);
+  }
 
   String _normalize(String value) => value.trim().toLowerCase();
 

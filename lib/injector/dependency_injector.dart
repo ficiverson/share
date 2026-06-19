@@ -11,9 +11,12 @@ import 'package:share_app/domain/repository/expenses_repository_contract.dart';
 import 'package:share_app/domain/repository/groups_repository_contract.dart';
 import 'package:share_app/domain/usecase/add_expense_use_case.dart';
 import 'package:share_app/domain/usecase/delete_all_expenses_use_case.dart';
+import 'package:share_app/domain/usecase/export_csv_use_case.dart';
 import 'package:share_app/domain/usecase/calculate_balances_use_case.dart';
 import 'package:share_app/domain/usecase/create_group_use_case.dart';
 import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
+import 'package:share_app/domain/usecase/delete_group_use_case.dart';
+import 'package:share_app/domain/usecase/edit_group_use_case.dart';
 import 'package:share_app/domain/usecase/edit_expense_use_case.dart';
 import 'package:share_app/domain/usecase/get_balances_use_case.dart';
 import 'package:share_app/domain/usecase/get_current_user_use_case.dart';
@@ -32,6 +35,7 @@ import 'package:share_app/domain/usecase/watch_groups_use_case.dart';
 import 'package:share_app/domain/usecase/watch_settlements_use_case.dart';
 import 'package:share_app/remote-data-source/firebase/auth_remote_datasource.dart';
 import 'package:share_app/remote-data-source/firebase/firestore_remote_datasource.dart';
+import 'package:share_app/services/local_notification_service.dart';
 
 /// Punto único de inyección de dependencias (sin `get_it`/`riverpod`), igual
 /// que en radiocom-flutter: aquí se instancian datasources, repositorios,
@@ -48,6 +52,7 @@ class DependencyInjector {
   late GroupsRepositoryContract _groupsRepository;
   late ExpensesRepositoryContract _expensesRepository;
   late BalancesRepositoryContract _balancesRepository;
+  late FirestoreRemoteDataSource _firestoreDataSource;
 
   /// Debe llamarse una vez al arrancar la app (antes de `runApp`), para
   /// inicializar Firebase y las dependencias que dependen de él.
@@ -57,11 +62,17 @@ class DependencyInjector {
     );
 
     _authRepository = AuthRepository(remoteDataSource: AuthRemoteDataSource());
-    final firestoreDataSource = FirestoreRemoteDataSource();
-    _groupsRepository = GroupsRepository(remoteDataSource: firestoreDataSource);
-    _expensesRepository = ExpensesRepository(remoteDataSource: firestoreDataSource);
-    _balancesRepository = BalancesRepository(remoteDataSource: firestoreDataSource);
+    _firestoreDataSource = FirestoreRemoteDataSource();
+    _groupsRepository = GroupsRepository(remoteDataSource: _firestoreDataSource);
+    _expensesRepository = ExpensesRepository(remoteDataSource: _firestoreDataSource);
+    _balancesRepository = BalancesRepository(remoteDataSource: _firestoreDataSource);
+
+    await LocalNotificationService.instance.init();
   }
+
+  /// Datasource de Firestore expuesto para que los presenters puedan escribir
+  /// notificaciones directamente sin necesitar un use case intermedio.
+  FirestoreRemoteDataSource get firestoreDataSource => _firestoreDataSource;
 
   AuthRepositoryContract get authRepository => _authRepository;
 
@@ -103,6 +114,10 @@ class DependencyInjector {
 
   LeaveGroupUseCase get leaveGroupUseCase => LeaveGroupUseCase(repository: groupsRepository);
 
+  EditGroupUseCase get editGroupUseCase => EditGroupUseCase(repository: groupsRepository);
+
+  DeleteGroupUseCase get deleteGroupUseCase => DeleteGroupUseCase(repository: groupsRepository);
+
   // --- Casos de uso de gastos (Fase 3) ---
   WatchExpensesUseCase get watchExpensesUseCase =>
       WatchExpensesUseCase(repository: expensesRepository);
@@ -115,6 +130,8 @@ class DependencyInjector {
       DeleteExpenseUseCase(repository: expensesRepository);
 
   ImportCsvUseCase get importCsvUseCase => ImportCsvUseCase(repository: expensesRepository);
+
+  ExportCsvUseCase get exportCsvUseCase => ExportCsvUseCase(repository: expensesRepository);
 
   DeleteAllExpensesUseCase get deleteAllExpensesUseCase =>
       DeleteAllExpensesUseCase(repository: expensesRepository);

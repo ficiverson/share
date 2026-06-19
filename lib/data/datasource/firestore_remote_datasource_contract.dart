@@ -23,6 +23,10 @@ abstract class FirestoreRemoteDataSourceContract {
 
   Future<void> updateMemberName(String groupId, String uid, String name);
 
+  Future<void> updateGroup(String groupId, {required String name, required String currency});
+
+  Future<void> deleteGroup(String groupId);
+
   // --- expenses ---
   Stream<List<Expense>> watchExpenses(String groupId);
 
@@ -42,4 +46,16 @@ abstract class FirestoreRemoteDataSourceContract {
   Stream<List<Settlement>> watchSettlements(String groupId);
 
   Future<Settlement> addSettlement(String groupId, Settlement settlement);
+
+  // --- notifications ---
+  /// Escribe un doc de notificación en `notifications/{recipientUid}/pending/`.
+  Future<void> sendNotificationToUser(
+      String recipientUid, Map<String, dynamic> payload);
+
+  /// Stream de docs pendientes en `notifications/{uid}/pending/`,
+  /// ordenados por `createdAt` ascendente.
+  Stream<List<Map<String, dynamic>>> watchPendingNotifications(String uid);
+
+  /// Elimina un doc de notificación ya procesado.
+  Future<void> deleteNotification(String uid, String notificationId);
 }

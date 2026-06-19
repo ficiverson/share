@@ -17,6 +17,7 @@ dependencies:
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.0
+  flutter_local_notifications: ^17.2.4
 
   # Login con Apple (web: Firebase popup; móvil: sign_in_with_apple + nonce)
   # google_sign_in se añade cuando se compile para móvil (en web Firebase
@@ -30,6 +31,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   csv: ^6.0.0
   file_picker: ^8.1.2
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

@@ -42,6 +42,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       invoker: injector.invoker,
       addExpenseUseCase: injector.addExpenseUseCase,
       editExpenseUseCase: injector.editExpenseUseCase,
+      firestoreDataSource: injector.firestoreDataSource,
     );
 
     final expense = widget.expense;
@@ -114,6 +115,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
         .map((memberId) => Split(memberId: memberId, shareAmount: shareAmount, shareType: ShareType.equal))
         .toList();
 
+    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id ?? '';
     final expense = Expense(
       expenseId: widget.expense?.expenseId ?? '',
       description: _descriptionController.text.trim(),
@@ -123,13 +125,17 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
           : _currencyController.text.trim().toUpperCase(),
       category: _categoryController.text.trim(),
       paidBy: _paidBy!,
+      // Preservar createdBy original al editar; asignar uid actual al crear.
+      createdBy: widget.expense?.createdBy.isNotEmpty == true
+          ? widget.expense!.createdBy
+          : uid,
       date: _date,
       createdAt: widget.expense?.createdAt ?? DateTime.now(),
       notes: _notesController.text.trim(),
       splits: splits,
     );
 
-    _presenter.save(widget.group.groupId, expense);
+    _presenter.save(widget.group.groupId, expense, widget.group);
   }
 
   @override

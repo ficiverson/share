@@ -6,6 +6,8 @@ import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/delete_all_expenses_use_case.dart';
 import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
 import 'package:share_app/domain/usecase/import_csv_use_case.dart';
+import 'package:share_app/domain/usecase/delete_group_use_case.dart';
+import 'package:share_app/domain/usecase/edit_group_use_case.dart';
 import 'package:share_app/domain/usecase/leave_group_use_case.dart';
 import 'package:share_app/domain/usecase/watch_expenses_use_case.dart';
 import 'package:share_app/models/expense.dart';
@@ -23,6 +25,8 @@ abstract class GroupDetailViewContract {
   void onCsvImported(int count);
   void onActionError(String error);
   void onGroupLeft();
+  void onGroupUpdated();
+  void onGroupDeleted();
 }
 
 class GroupDetailPresenter {
@@ -34,6 +38,8 @@ class GroupDetailPresenter {
   final DeleteAllExpensesUseCase deleteAllExpensesUseCase;
   final ImportCsvUseCase importCsvUseCase;
   final LeaveGroupUseCase leaveGroupUseCase;
+  final EditGroupUseCase editGroupUseCase;
+  final DeleteGroupUseCase deleteGroupUseCase;
 
   StreamSubscription<Group>? _groupSubscription;
   StreamSubscription<List<Expense>>? _expensesSubscription;
@@ -47,6 +53,8 @@ class GroupDetailPresenter {
     required this.deleteAllExpensesUseCase,
     required this.importCsvUseCase,
     required this.leaveGroupUseCase,
+    required this.editGroupUseCase,
+    required this.deleteGroupUseCase,
   });
 
   /// Empieza a escuchar en tiempo real los datos del grupo y sus gastos.
@@ -118,6 +126,34 @@ class GroupDetailPresenter {
       _view.onActionLoading(false);
       if (result is Success) {
         _view.onGroupLeft();
+      } else {
+        _view.onActionError((result as Error).getError());
+      }
+    });
+  }
+
+  void editGroup(String groupId, {required String name, required String currency}) {
+    _view.onActionLoading(true);
+    invoker
+        .execute(editGroupUseCase.withParams(
+      EditGroupParams(groupId: groupId, name: name, currency: currency),
+    ))
+        .listen((result) {
+      _view.onActionLoading(false);
+      if (result is Success) {
+        _view.onGroupUpdated();
+      } else {
+        _view.onActionError((result as Error).getError());
+      }
+    });
+  }
+
+  void deleteGroup(String groupId) {
+    _view.onActionLoading(true);
+    invoker.execute(deleteGroupUseCase.withParams(groupId)).listen((result) {
+      _view.onActionLoading(false);
+      if (result is Success) {
+        _view.onGroupDeleted();
       } else {
         _view.onActionError((result as Error).getError());
       }

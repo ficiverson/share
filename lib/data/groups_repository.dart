@@ -76,4 +76,11 @@ class GroupsRepository implements GroupsRepositoryContract {
       groups.map((g) => _remoteDataSource.updateMemberName(g.groupId, uid, name)),
     );
   }
+
+  @override
+  Future<void> updateGroup(String groupId, {required String name, required String currency}) =>
+      _remoteDataSource.updateGroup(groupId, name: name, currency: currency);
+
+  @override
+  Future<void> deleteGroup(String groupId) => _remoteDataSource.deleteGroup(groupId);
 }
