@@ -37,9 +37,10 @@ class ExpenseDetailView extends StatelessWidget {
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(expense.date);
     final fmt = NumberFormat.currency(symbol: '${expense.currency} ', decimalDigits: 2);
 
-    // ¿Puede editar? El pagador, el creador o cualquiera (si queremos ser permisivos).
-    // Por ahora: creador o pagador.
-    final canEdit = uid == expense.paidBy || uid == expense.createdBy;
+    // Owner del grupo puede editar cualquier gasto.
+    // Miembros: solo sus propios gastos (los que pagaron o crearon).
+    final isGroupOwner = uid == group.createdBy;
+    final canEdit = isGroupOwner || uid == expense.paidBy || uid == expense.createdBy;
 
     return Scaffold(
       appBar: AppBar(

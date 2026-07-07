@@ -464,6 +464,19 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     await ExpenseFormRouter.open(context, group);
   }
 
+  /// Devuelve true si el usuario actual puede editar o borrar [expense].
+  /// Propietario del grupo → siempre. Miembro → solo sus gastos.
+  bool _canModifyExpense(Expense expense) {
+    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
+    if (uid == null) return false;
+    final group = _group;
+    if (group == null) return false;
+    final isOwner = group.createdBy == uid;
+    final isCreator = expense.createdBy == uid;
+    final isPayer = expense.paidBy == uid;
+    return isOwner || isCreator || isPayer;
+  }
+
   Future<void> _editExpense(Expense expense) async {
     final group = _group;
     if (group == null) return;
@@ -804,7 +817,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
         if (group == null) return;
         await ExpenseDetailRouter.open(context, expense: expense, group: group);
       },
-      onLongPress: () => _deleteExpense(expense),
+      onLongPress: _canModifyExpense(expense) ? () => _deleteExpense(expense) : null,
       borderRadius: BorderRadius.circular(4),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -988,19 +1001,21 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
-                    value: 'deleteAll',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_sweep, color: ShareColors.error),
-                        SizedBox(width: 8),
-                        Text('Borrar todos los gastos',
-                            style: TextStyle(color: ShareColors.error)),
-                      ],
+                  if (isCreator)
+                    const PopupMenuItem(
+                      value: 'deleteAll',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_sweep, color: ShareColors.error),
+                          SizedBox(width: 8),
+                          Text('Borrar todos los gastos',
+                              style: TextStyle(color: ShareColors.error)),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'leave',
+                  if (!isCreator)
+                    const PopupMenuItem(
+                      value: 'leave',
                     child: Row(
                       children: [
                         Icon(Icons.exit_to_app, color: ShareColors.error),
