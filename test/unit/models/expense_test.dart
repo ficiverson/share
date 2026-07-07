@@ -115,5 +115,116 @@ void main() {
       expect(restored.date.month, 6);
       expect(restored.date.day, 15);
     });
+
+    // ── payments (pago compartido) ─────────────────────────────────────────
+    test('payments defaults a lista vacía', () {
+      final e = _make();
+      expect(e.payments, isEmpty);
+    });
+
+    test('constructor acepta payments no vacíos', () {
+      final e = _make()..payments; // acceso compile-check
+      final e2 = Expense(
+        expenseId: 'e1',
+        description: 'Cena',
+        amount: 90,
+        currency: 'EUR',
+        category: '',
+        paidBy: 'alice',
+        date: DateTime(2024),
+        createdAt: DateTime(2024),
+        payments: [
+          Split(memberId: 'alice', shareAmount: 50, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 40, shareType: ShareType.exact),
+        ],
+      );
+      expect(e2.payments.length, 2);
+      expect(e2.payments.first.memberId, 'alice');
+      expect(e2.payments.first.shareAmount, 50);
+    });
+
+    test('toMap serializa payments', () {
+      final e = Expense(
+        expenseId: 'e1',
+        description: 'Test',
+        amount: 90,
+        currency: 'EUR',
+        category: '',
+        paidBy: 'alice',
+        date: DateTime(2024),
+        createdAt: DateTime(2024),
+        payments: [
+          Split(memberId: 'alice', shareAmount: 50, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 40, shareType: ShareType.exact),
+        ],
+      );
+      final map = e.toMap();
+      final payments = map['payments'] as List;
+      expect(payments.length, 2);
+      expect(payments.first['memberId'], 'alice');
+      expect(payments.first['shareAmount'], 50.0);
+    });
+
+    test('fromMap deserializa payments', () {
+      final map = {
+        'description': 'Test',
+        'amount': 90.0,
+        'currency': 'EUR',
+        'category': '',
+        'paidBy': 'alice',
+        'createdBy': '',
+        'date': '2024-01-01T00:00:00.000',
+        'createdAt': '2024-01-01T00:00:00.000',
+        'notes': '',
+        'splits': [],
+        'payments': [
+          {'memberId': 'alice', 'shareAmount': 50.0, 'shareType': 'exact'},
+          {'memberId': 'bob', 'shareAmount': 40.0, 'shareType': 'exact'},
+        ],
+      };
+      final e = Expense.fromMap('e1', map);
+      expect(e.payments.length, 2);
+      expect(e.payments.first.memberId, 'alice');
+      expect(e.payments[1].shareAmount, 40.0);
+    });
+
+    test('fromMap sin campo payments usa lista vacía (backward compat)', () {
+      final map = {
+        'description': 'Legacy',
+        'amount': 30.0,
+        'currency': 'EUR',
+        'category': '',
+        'paidBy': 'alice',
+        'createdBy': '',
+        'date': '2024-01-01T00:00:00.000',
+        'createdAt': '2024-01-01T00:00:00.000',
+        'notes': '',
+        'splits': [],
+        // sin campo 'payments' → backward compat
+      };
+      final e = Expense.fromMap('e1', map);
+      expect(e.payments, isEmpty);
+    });
+
+    test('round-trip toMap/fromMap conserva payments', () {
+      final original = Expense(
+        expenseId: 'e1',
+        description: 'Compartido',
+        amount: 90,
+        currency: 'EUR',
+        category: '',
+        paidBy: 'alice',
+        date: DateTime(2024),
+        createdAt: DateTime(2024),
+        payments: [
+          Split(memberId: 'alice', shareAmount: 50, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 40, shareType: ShareType.exact),
+        ],
+      );
+      final restored = Expense.fromMap('e1', original.toMap());
+      expect(restored.payments.length, 2);
+      expect(restored.payments.first.shareAmount, 50);
+      expect(restored.payments[1].memberId, 'bob');
+    });
   });
 }
