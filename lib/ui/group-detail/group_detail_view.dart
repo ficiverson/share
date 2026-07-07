@@ -976,6 +976,38 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(
+                    value: 'stats',
+                    child: Row(children: [
+                      Icon(Icons.bar_chart),
+                      SizedBox(width: 12),
+                      Text('Estadísticas'),
+                    ]),
+                  ),
+                  const PopupMenuItem(
+                    value: 'invite',
+                    child: Row(children: [
+                      Icon(Icons.person_add_outlined),
+                      SizedBox(width: 12),
+                      Text('Invitar miembros'),
+                    ]),
+                  ),
+                  const PopupMenuItem(
+                    value: 'editGroup',
+                    child: Row(children: [
+                      Icon(Icons.edit_outlined),
+                      SizedBox(width: 12),
+                      Text('Editar grupo'),
+                    ]),
+                  ),
+                  const PopupMenuItem(
+                    value: 'importCsv',
+                    child: Row(children: [
+                      Icon(Icons.upload_file_outlined),
+                      SizedBox(width: 12),
+                      Text('Importar CSV'),
+                    ]),
+                  ),
+                  const PopupMenuItem(
                     value: 'exportCsv',
                     child: Row(children: [
                       Icon(Icons.download_outlined),
