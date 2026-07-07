@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_app/domain/result/result.dart';
+import 'package:share_app/domain/usecase/delete_expense_use_case.dart';
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
@@ -10,7 +12,7 @@ import 'package:share_app/utils/share_colors.dart';
 /// Pantalla de detalle de un gasto — solo lectura.
 /// Muestra descripción, importe, pagador, fecha, categoría, notas y reparto.
 /// Devuelve [true] si el gasto fue editado o borrado (para que el padre recargue).
-class ExpenseDetailView extends StatelessWidget {
+class ExpenseDetailView extends StatefulWidget {
   const ExpenseDetailView({
     super.key,
     required this.expense,
@@ -20,11 +22,67 @@ class ExpenseDetailView extends StatelessWidget {
   final Expense expense;
   final Group group;
 
+  @override
+  State<ExpenseDetailView> createState() => _ExpenseDetailViewState();
+}
+
+class _ExpenseDetailViewState extends State<ExpenseDetailView> {
+  bool _deleting = false;
+
   String _memberName(String uid) {
     try {
-      return group.members.firstWhere((m) => m.id == uid).displayName;
+      return widget.group.members.firstWhere((m) => m.id == uid).displayName;
     } catch (_) {
       return uid;
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Borrar gasto'),
+        content: Text('¿Borrar "${widget.expense.description}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: ShareColors.error),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      final injector = DependencyInjector.instance;
+      final useCase = injector.deleteExpenseUseCase
+        ..params = DeleteExpenseParams(
+          groupId: widget.group.groupId,
+          expenseId: widget.expense.expenseId,
+        );
+      await for (final result in injector.invoker.execute(useCase)) {
+        if (result.status == Status.fail && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text((result as Error).getError())),
+          );
+          setState(() => _deleting = false);
+          return;
+        }
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al borrar: $e')),
+        );
+        setState(() => _deleting = false);
+      }
     }
   }
 
@@ -33,34 +91,48 @@ class ExpenseDetailView extends StatelessWidget {
     final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final expense = widget.expense;
+    final group = widget.group;
     final icon = ExpenseCategory.icon(expense.category);
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(expense.date);
     final fmt = NumberFormat.currency(symbol: '${expense.currency} ', decimalDigits: 2);
 
-    // Owner del grupo puede editar cualquier gasto.
-    // Miembros: solo sus propios gastos (los que pagaron o crearon).
-    final isGroupOwner = uid == group.createdBy;
-    final canEdit = isGroupOwner || uid == expense.paidBy || uid == expense.createdBy;
+    // Cualquier miembro del grupo puede editar cualquier gasto.
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del gasto'),
         actions: [
-          if (canEdit)
+          if (_deleting)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+            )
+          else ...[
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Editar gasto',
-              onPressed: () async {
-                final saved = await ExpenseFormRouter.open(
-                  context,
-                  group,
-                  expense: expense,
-                );
-                if (saved != null && context.mounted) {
-                  Navigator.pop(context, true);
-                }
-              },
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Editar gasto',
+                onPressed: () async {
+                  final saved = await ExpenseFormRouter.open(
+                    context,
+                    group,
+                    expense: expense,
+                  );
+                  if (saved != null && context.mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+              ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Borrar gasto',
+              onPressed: _confirmDelete,
             ),
+          ],
         ],
       ),
       body: ListView(
@@ -120,11 +192,21 @@ class ExpenseDetailView extends StatelessWidget {
           Card(
             child: Column(
               children: [
-                _InfoRow(
-                  icon: Icons.person_outline,
-                  label: 'Pagó',
-                  value: _memberName(expense.paidBy),
-                ),
+                if (expense.payments.isEmpty)
+                  _InfoRow(
+                    icon: Icons.person_outline,
+                    label: 'Pagó',
+                    value: _memberName(expense.paidBy),
+                  )
+                else
+                  _InfoRow(
+                    icon: Icons.payments_outlined,
+                    label: 'Pagaron',
+                    value: expense.payments
+                        .map((p) =>
+                            '${_memberName(p.memberId)}: ${fmt.format(p.shareAmount)}')
+                        .join('\n'),
+                  ),
                 const Divider(height: 1, indent: 56),
                 _InfoRow(
                   icon: Icons.calendar_today_outlined,

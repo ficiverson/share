@@ -8,8 +8,8 @@ import 'package:share_app/ui/expenses/expense_form_presenter.dart';
 import 'package:share_app/utils/share_colors.dart';
 
 /// Formulario de alta/edición de un gasto.
-/// Soporta reparto igual entre miembros seleccionados o reparto personalizado
-/// donde el usuario indica manualmente el importe de cada miembro.
+/// Soporta reparto igual o personalizado entre miembros,
+/// y pago único o compartido entre varios pagadores.
 class ExpenseFormView extends StatefulWidget {
   final Group group;
   final Expense? expense;
@@ -35,9 +35,14 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
   bool _saving = false;
   String? _error;
 
-  // Split personalizado
+  // Split personalizado (quién debe cuánto)
   bool _customSplit = false;
   final Map<String, TextEditingController> _splitControllers = {};
+
+  // Pago compartido (quién pagó cuánto)
+  bool _sharedPayment = false;
+  late Set<String> _payingMemberIds;
+  final Map<String, TextEditingController> _paymentControllers = {};
 
   @override
   void initState() {
@@ -54,9 +59,10 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     final expense = widget.expense;
     _currencyController = TextEditingController(text: expense?.currency ?? widget.group.currency);
 
-    // Inicializar controladores de split por miembro
+    // Inicializar controladores por miembro
     for (final m in widget.group.members) {
       _splitControllers[m.memberId] = TextEditingController();
+      _paymentControllers[m.memberId] = TextEditingController();
     }
 
     if (expense != null) {
@@ -68,7 +74,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       _date = expense.date;
       _selectedMemberIds = expense.splits.map((s) => s.memberId).toSet();
 
-      // Detectar si el gasto existente usa split personalizado
+      // Split personalizado
       final isCustom = expense.splits.any((s) => s.shareType == ShareType.exact);
       _customSplit = isCustom;
       if (isCustom) {
@@ -76,9 +82,21 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
           _splitControllers[s.memberId]?.text = s.shareAmount.toStringAsFixed(2);
         }
       }
+
+      // Pago compartido
+      if (expense.payments.isNotEmpty) {
+        _sharedPayment = true;
+        _payingMemberIds = expense.payments.map((p) => p.memberId).toSet();
+        for (final p in expense.payments) {
+          _paymentControllers[p.memberId]?.text = p.shareAmount.toStringAsFixed(2);
+        }
+      } else {
+        _payingMemberIds = {if (_paidBy != null) _paidBy!};
+      }
     } else {
       _paidBy = widget.group.members.isNotEmpty ? widget.group.members.first.memberId : null;
       _selectedMemberIds = widget.group.members.map((m) => m.memberId).toSet();
+      _payingMemberIds = {if (_paidBy != null) _paidBy!};
     }
   }
 
@@ -89,19 +107,16 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     _categoryController.dispose();
     _notesController.dispose();
     _currencyController.dispose();
-    for (final c in _splitControllers.values) {
-      c.dispose();
-    }
+    for (final c in _splitControllers.values) c.dispose();
+    for (final c in _paymentControllers.values) c.dispose();
     super.dispose();
   }
 
   @override
-  void onSaving(bool isSaving) {
-    setState(() {
-      _saving = isSaving;
-      if (isSaving) _error = null;
-    });
-  }
+  void onSaving(bool isSaving) => setState(() {
+        _saving = isSaving;
+        if (isSaving) _error = null;
+      });
 
   @override
   void onSaved(Expense expense) {
@@ -109,9 +124,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
   }
 
   @override
-  void onSaveError(String error) {
-    setState(() => _error = error);
-  }
+  void onSaveError(String error) => setState(() => _error = error);
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -123,7 +136,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     if (picked != null) setState(() => _date = picked);
   }
 
-  /// Rellena los splits iguales en los controllers cuando se activa split personalizado
+  /// Pre-rellena splits iguales cuando se activa reparto personalizado
   void _fillEqualSplits() {
     final amount = double.tryParse(_amountController.text.trim().replaceAll(',', '.')) ?? 0;
     if (_selectedMemberIds.isEmpty) return;
@@ -131,11 +144,21 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     for (final id in _selectedMemberIds) {
       _splitControllers[id]?.text = share.toStringAsFixed(2);
     }
-    // Limpiar los no seleccionados
     for (final id in _splitControllers.keys) {
-      if (!_selectedMemberIds.contains(id)) {
-        _splitControllers[id]?.text = '';
-      }
+      if (!_selectedMemberIds.contains(id)) _splitControllers[id]?.text = '';
+    }
+  }
+
+  /// Pre-rellena pagos iguales cuando se activa pago compartido
+  void _fillEqualPayments() {
+    final amount = double.tryParse(_amountController.text.trim().replaceAll(',', '.')) ?? 0;
+    if (_payingMemberIds.isEmpty) return;
+    final share = amount / _payingMemberIds.length;
+    for (final id in _payingMemberIds) {
+      _paymentControllers[id]?.text = share.toStringAsFixed(2);
+    }
+    for (final id in _paymentControllers.keys) {
+      if (!_payingMemberIds.contains(id)) _paymentControllers[id]?.text = '';
     }
   }
 
@@ -145,27 +168,25 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       setState(() => _error = 'Introduce una descripción y un importe válido');
       return;
     }
-    if (_paidBy == null || _selectedMemberIds.isEmpty) {
-      setState(() => _error = 'Selecciona quién pagó y al menos un miembro para el reparto');
+    if (_selectedMemberIds.isEmpty) {
+      setState(() => _error = 'Selecciona al menos un miembro para el reparto');
       return;
     }
 
+    // ── Reparto (splits) ──────────────────────────────────────────────────
     List<Split> splits;
-
     if (_customSplit) {
-      // Validar que los importes personalizados sumen al total
       double total = 0;
       final customSplits = <Split>[];
       for (final id in _selectedMemberIds) {
         final val = double.tryParse(_splitControllers[id]?.text.trim().replaceAll(',', '.') ?? '');
         if (val == null || val < 0) {
-          setState(() => _error = 'Introduce un importe válido para cada miembro');
+          setState(() => _error = 'Introduce un importe válido para cada miembro del reparto');
           return;
         }
         total += val;
         customSplits.add(Split(memberId: id, shareAmount: val, shareType: ShareType.exact));
       }
-      // Tolerancia de 1 céntimo por redondeo
       if ((total - amount).abs() > 0.02) {
         setState(() => _error =
             'La suma del reparto (${total.toStringAsFixed(2)}) no coincide con el total (${amount.toStringAsFixed(2)})');
@@ -179,6 +200,42 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
           .toList();
     }
 
+    // ── Pagos (payments) ──────────────────────────────────────────────────
+    List<Split> payments = [];
+    String paidBy;
+
+    if (_sharedPayment) {
+      if (_payingMemberIds.isEmpty) {
+        setState(() => _error = 'Selecciona al menos un pagador');
+        return;
+      }
+      double total = 0;
+      final paymentList = <Split>[];
+      for (final id in _payingMemberIds) {
+        final val = double.tryParse(_paymentControllers[id]?.text.trim().replaceAll(',', '.') ?? '');
+        if (val == null || val < 0) {
+          setState(() => _error = 'Introduce un importe válido para cada pagador');
+          return;
+        }
+        total += val;
+        paymentList.add(Split(memberId: id, shareAmount: val, shareType: ShareType.exact));
+      }
+      if ((total - amount).abs() > 0.02) {
+        setState(() => _error =
+            'La suma de los pagos (${total.toStringAsFixed(2)}) no coincide con el total (${amount.toStringAsFixed(2)})');
+        return;
+      }
+      payments = paymentList;
+      // paidBy = el que más pagó (para compatibilidad con vistas legacy)
+      paidBy = paymentList.reduce((a, b) => a.shareAmount >= b.shareAmount ? a : b).memberId;
+    } else {
+      if (_paidBy == null) {
+        setState(() => _error = 'Selecciona quién pagó');
+        return;
+      }
+      paidBy = _paidBy!;
+    }
+
     final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id ?? '';
     final expense = Expense(
       expenseId: widget.expense?.expenseId ?? '',
@@ -188,7 +245,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
           ? widget.group.currency
           : _currencyController.text.trim().toUpperCase(),
       category: _categoryController.text.trim(),
-      paidBy: _paidBy!,
+      paidBy: paidBy,
       createdBy: widget.expense?.createdBy.isNotEmpty == true
           ? widget.expense!.createdBy
           : uid,
@@ -196,6 +253,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       createdAt: widget.expense?.createdAt ?? DateTime.now(),
       notes: _notesController.text.trim(),
       splits: splits,
+      payments: payments,
     );
 
     _presenter.save(widget.group.groupId, expense, widget.group);
@@ -206,6 +264,10 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     final members = widget.group.members;
     final isEdit = widget.expense != null;
     final selectedMembers = members.where((m) => _selectedMemberIds.contains(m.memberId)).toList();
+    final payingMembers = members.where((m) => _payingMemberIds.contains(m.memberId)).toList();
+    final currency = _currencyController.text.trim().isNotEmpty
+        ? _currencyController.text.trim().toUpperCase()
+        : widget.group.currency;
 
     return Scaffold(
       appBar: AppBar(title: Text(isEdit ? 'Editar gasto' : 'Nuevo gasto')),
@@ -231,6 +293,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                     decoration: const InputDecoration(labelText: 'Importe'),
                     onChanged: (_) {
                       if (_customSplit) setState(() => _fillEqualSplits());
+                      if (_sharedPayment) setState(() => _fillEqualPayments());
                     },
                   ),
                 ),
@@ -263,23 +326,139 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
             ),
             const SizedBox(height: 8),
 
-            // ── Pagador ───────────────────────────────────────────────────
-            DropdownButtonFormField<String>(
-              value: _paidBy,
-              decoration: const InputDecoration(labelText: '¿Quién pagó?'),
-              items: members
-                  .map((m) => DropdownMenuItem(value: m.memberId, child: Text(m.name)))
-                  .toList(),
-              onChanged: (value) => setState(() => _paidBy = value),
+            // ── Sección pagador ───────────────────────────────────────────
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Pago compartido'),
+                    subtitle: Text(
+                      _sharedPayment
+                          ? 'Varios miembros pusieron dinero'
+                          : 'Un solo miembro pagó todo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    value: _sharedPayment,
+                    activeColor: ShareColors.primary,
+                    onChanged: (val) => setState(() {
+                      _sharedPayment = val;
+                      if (val) {
+                        // Al activar: inicializar con el pagador actual
+                        _payingMemberIds = {if (_paidBy != null) _paidBy!};
+                        _fillEqualPayments();
+                      }
+                    }),
+                  ),
+                  if (!_sharedPayment)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: DropdownButtonFormField<String>(
+                        value: _paidBy,
+                        decoration: const InputDecoration(labelText: '¿Quién pagó?'),
+                        items: members
+                            .map((m) => DropdownMenuItem(value: m.memberId, child: Text(m.name)))
+                            .toList(),
+                        onChanged: (value) => setState(() => _paidBy = value),
+                      ),
+                    ),
+                  if (_sharedPayment) ...[
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '¿Quién pagó cuánto?',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ),
+                    ),
+                    ...members.map((m) => Column(
+                          children: [
+                            CheckboxListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                              value: _payingMemberIds.contains(m.memberId),
+                              title: Text(m.name),
+                              activeColor: ShareColors.primary,
+                              onChanged: (checked) => setState(() {
+                                if (checked == true) {
+                                  _payingMemberIds.add(m.memberId);
+                                } else {
+                                  _payingMemberIds.remove(m.memberId);
+                                  _paymentControllers[m.memberId]?.text = '';
+                                }
+                                _fillEqualPayments();
+                              }),
+                            ),
+                            if (_payingMemberIds.contains(m.memberId))
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(32, 0, 16, 8),
+                                child: TextField(
+                                  controller: _paymentControllers[m.memberId],
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: InputDecoration(
+                                    labelText: 'Pagó ${m.name}',
+                                    suffixText: currency,
+                                    prefixIcon: const Icon(Icons.payments_outlined, size: 18),
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                          ],
+                        )),
+                    // Indicador de suma de pagos
+                    Builder(builder: (context) {
+                      double total = 0;
+                      for (final id in _payingMemberIds) {
+                        total += double.tryParse(
+                                _paymentControllers[id]?.text.trim().replaceAll(',', '.') ?? '') ??
+                            0;
+                      }
+                      final target =
+                          double.tryParse(_amountController.text.trim().replaceAll(',', '.')) ?? 0;
+                      final ok = target > 0 && (total - target).abs() <= 0.02;
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(
+                              ok ? Icons.check_circle_outline : Icons.error_outline,
+                              size: 16,
+                              color: ok ? Colors.green : ShareColors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Pagado: ${total.toStringAsFixed(2)} / ${target.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: ok ? Colors.green : ShareColors.error,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // ── Selección de miembros ─────────────────────────────────────
+            // ── Selección de miembros para el reparto ─────────────────────
             const Text('Repartir entre:', style: TextStyle(fontWeight: FontWeight.bold)),
             ...members.map((member) => CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _selectedMemberIds.contains(member.memberId),
                   title: Text(member.name),
+                  activeColor: ShareColors.primary,
                   onChanged: (checked) => setState(() {
                     if (checked == true) {
                       _selectedMemberIds.add(member.memberId);
@@ -324,14 +503,11 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
                         labelText: member.name,
-                        suffixText: _currencyController.text.trim().isNotEmpty
-                            ? _currencyController.text.trim().toUpperCase()
-                            : widget.group.currency,
+                        suffixText: currency,
                         prefixIcon: const Icon(Icons.person_outline, size: 18),
                       ),
                     ),
                   )),
-              // Indicador de suma
               Builder(builder: (context) {
                 double total = 0;
                 for (final id in _selectedMemberIds) {

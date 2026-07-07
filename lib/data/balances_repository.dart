@@ -28,7 +28,14 @@ class BalancesRepository implements BalancesRepositoryContract {
     }
 
     for (final expense in expenses) {
-      paid[expense.paidBy] = (paid[expense.paidBy] ?? 0) + expense.amount;
+      // Pago único o compartido entre varios pagadores
+      if (expense.payments.isNotEmpty) {
+        for (final payment in expense.payments) {
+          paid[payment.memberId] = (paid[payment.memberId] ?? 0) + payment.shareAmount;
+        }
+      } else {
+        paid[expense.paidBy] = (paid[expense.paidBy] ?? 0) + expense.amount;
+      }
       for (final split in expense.splits) {
         owed[split.memberId] = (owed[split.memberId] ?? 0) + split.shareAmount;
       }
