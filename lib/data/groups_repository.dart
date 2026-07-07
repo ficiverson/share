@@ -34,6 +34,7 @@ class GroupsRepository implements GroupsRepositoryContract {
       email: createdByEmail,
       photoUrl: createdByPhotoUrl,
       joinedAt: DateTime.now(),
+      role: MemberRole.owner,
     );
     final group = Group(
       groupId: '',
