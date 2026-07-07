@@ -2,19 +2,25 @@ import 'split.dart';
 
 /// Gasto registrado en un grupo. Documento de la subcolección
 /// `groups/{groupId}/expenses/{expenseId}`, con los repartos (`splits`)
-/// embebidos como array.
+/// y los pagos (`payments`) embebidos como arrays.
+///
+/// `payments` vacío → un solo pagador indicado en `paidBy`.
+/// `payments` no vacío → varios pagadores; `paidBy` es el de mayor importe.
 class Expense {
   final String expenseId;
   final String description;
   final double amount;
   final String currency;
   final String category;
-  final String paidBy;    // memberId (uid) del pagador
-  final String createdBy; // uid del usuario que registró el gasto (para notificaciones)
+  final String paidBy;    // memberId del pagador principal (o único)
+  final String createdBy; // uid del usuario que registró el gasto
   final DateTime date;
   final DateTime createdAt;
   final String notes;
   final List<Split> splits;
+  /// Pagos individuales cuando el gasto lo pagan varios miembros.
+  /// Vacío = pago único por [paidBy].
+  final List<Split> payments;
 
   Expense({
     required this.expenseId,
@@ -28,6 +34,7 @@ class Expense {
     required this.createdAt,
     this.notes = '',
     this.splits = const [],
+    this.payments = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -41,6 +48,7 @@ class Expense {
         'createdAt': createdAt.toIso8601String(),
         'notes': notes,
         'splits': splits.map((s) => s.toMap()).toList(),
+        'payments': payments.map((p) => p.toMap()).toList(),
       };
 
   factory Expense.fromMap(String expenseId, Map<String, dynamic> map) => Expense(
@@ -58,6 +66,9 @@ class Expense {
         notes: map['notes'] as String? ?? '',
         splits: ((map['splits'] as List?) ?? const [])
             .map((s) => Split.fromMap(Map<String, dynamic>.from(s as Map)))
+            .toList(),
+        payments: ((map['payments'] as List?) ?? const [])
+            .map((p) => Split.fromMap(Map<String, dynamic>.from(p as Map)))
             .toList(),
       );
 }

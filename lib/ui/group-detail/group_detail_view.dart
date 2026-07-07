@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:intl/intl.dart';
 
@@ -18,7 +17,6 @@ import 'package:share_app/ui/stats/stats_router.dart';
 import 'package:share_app/ui/expenses/expense_form_router.dart';
 import 'package:share_app/ui/expense-detail/expense_detail_router.dart';
 import 'package:share_app/ui/group-detail/group_detail_presenter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
@@ -576,15 +574,13 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
       }
       if (csvContent == null) return;
 
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${group.name}_gastos.csv');
-      await file.writeAsString(csvContent);
-
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path, mimeType: 'text/csv')],
-          subject: 'Gastos de ${group.name}',
-        ),
+      await Share.shareXFiles(
+        [XFile.fromData(
+          utf8.encode(csvContent),
+          mimeType: 'text/csv',
+        )],
+        fileNameOverrides: ['${group.name}_gastos.csv'],
+        subject: 'Gastos de ${group.name}',
       );
     } catch (e) {
       if (mounted) {
@@ -940,6 +936,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
               )
             : Text(group?.name ?? 'Grupo'),
         actions: [
+          // Búsqueda — siempre visible
           IconButton(
             icon: Icon(_searchActive ? Icons.close : Icons.search),
             tooltip: _searchActive ? 'Cerrar búsqueda' : 'Buscar gastos',
@@ -952,88 +949,70 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
             }),
           ),
           if (!_searchActive) ...[
+            // Saldos — siempre visible
             IconButton(
               icon: const Icon(Icons.account_balance_wallet),
               tooltip: 'Ver saldos',
               onPressed: group == null ? null : () => BalancesRouter.open(context, group),
             ),
-            IconButton(
-              icon: const Icon(Icons.bar_chart),
-              tooltip: 'Estadísticas',
-              onPressed: group == null || _expenses == null
-                  ? null
-                  : () => StatsRouter.open(context,
-                        group: group, expenses: _expenses!),
-            ),
-            IconButton(
-              icon: const Icon(Icons.person_add),
-              tooltip: 'Invitar miembros',
-              onPressed: group == null ? null : _showInviteSheet,
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Editar grupo',
-              onPressed: group == null || _actionLoading ? null : _showEditGroupDialog,
-            ),
-            IconButton(
-              icon: const Icon(Icons.upload_file),
-              tooltip: 'Importar CSV de Splitwise',
-              onPressed: _actionLoading ? null : _importCsv,
-            ),
+            // Menú ⋮ — todo lo demás
             Builder(builder: (context) {
               final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
               final isCreator = group != null && group.createdBy == uid;
               return PopupMenuButton<String>(
                 onSelected: (value) {
-                  if (value == 'leave') _confirmLeaveGroup();
-                  if (value == 'deleteAll') _confirmDeleteAllExpenses();
-                  if (value == 'deleteGroup') _confirmDeleteGroup();
+                  if (value == 'stats') {
+                    if (group != null && _expenses != null) {
+                      StatsRouter.open(context, group: group, expenses: _expenses!);
+                    }
+                  }
+                  if (value == 'invite') _showInviteSheet();
+                  if (value == 'editGroup') _showEditGroupDialog();
+                  if (value == 'importCsv') _importCsv();
                   if (value == 'exportCsv') _exportCsv();
+                  if (value == 'deleteAll') _confirmDeleteAllExpenses();
+                  if (value == 'leave') _confirmLeaveGroup();
+                  if (value == 'deleteGroup') _confirmDeleteGroup();
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(
                     value: 'exportCsv',
-                    child: Row(
-                      children: [
-                        Icon(Icons.download_outlined),
-                        SizedBox(width: 8),
-                        Text('Exportar gastos a CSV'),
-                      ],
-                    ),
+                    child: Row(children: [
+                      Icon(Icons.download_outlined),
+                      SizedBox(width: 12),
+                      Text('Exportar CSV'),
+                    ]),
                   ),
+                  const PopupMenuDivider(),
                   if (isCreator)
                     const PopupMenuItem(
                       value: 'deleteAll',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_sweep, color: ShareColors.error),
-                          SizedBox(width: 8),
-                          Text('Borrar todos los gastos',
-                              style: TextStyle(color: ShareColors.error)),
-                        ],
-                      ),
+                      child: Row(children: [
+                        Icon(Icons.delete_sweep, color: ShareColors.error),
+                        SizedBox(width: 12),
+                        Text('Borrar todos los gastos',
+                            style: TextStyle(color: ShareColors.error)),
+                      ]),
                     ),
                   if (!isCreator)
                     const PopupMenuItem(
                       value: 'leave',
-                    child: Row(
-                      children: [
+                      child: Row(children: [
                         Icon(Icons.exit_to_app, color: ShareColors.error),
-                        SizedBox(width: 8),
-                        Text('Salir del grupo', style: TextStyle(color: ShareColors.error)),
-                      ],
+                        SizedBox(width: 12),
+                        Text('Salir del grupo',
+                            style: TextStyle(color: ShareColors.error)),
+                      ]),
                     ),
-                  ),
                   if (isCreator)
                     const PopupMenuItem(
                       value: 'deleteGroup',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_forever, color: ShareColors.error),
-                          SizedBox(width: 8),
-                          Text('Borrar grupo', style: TextStyle(color: ShareColors.error)),
-                        ],
-                      ),
+                      child: Row(children: [
+                        Icon(Icons.delete_forever, color: ShareColors.error),
+                        SizedBox(width: 12),
+                        Text('Borrar grupo',
+                            style: TextStyle(color: ShareColors.error)),
+                      ]),
                     ),
                 ],
               );
