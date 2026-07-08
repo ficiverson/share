@@ -20,6 +20,7 @@ import 'package:share_app/ui/group-detail/group_detail_presenter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Pantalla de detalle de un grupo: datos del grupo, `groupId` (para
 /// invitar), miembros y lista de gastos en tiempo real. Permite añadir,
@@ -615,9 +616,9 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
             ? ShareColors.negative
             : null;
     final netLabel = userNet > 0.01
-        ? 'Te deben ${userNet.toStringAsFixed(2)} ${group.currency}'
+        ? 'Te deben ${ShareFormat.money(userNet, group.currency)}'
         : userNet < -0.01
-            ? 'Debes ${(-userNet).toStringAsFixed(2)} ${group.currency}'
+            ? 'Debes ${ShareFormat.money(-userNet, group.currency)}'
             : 'Estás al día';
 
     return Card(
@@ -633,7 +634,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                   const Text('Total gastado',
                       style: TextStyle(fontSize: 12, color: Colors.black54)),
                   Text(
-                    '${totalSpent.toStringAsFixed(2)} ${group.currency}',
+                    ShareFormat.money(totalSpent, group.currency),
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   Text(
@@ -861,8 +862,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                   ),
                   Text(
                     isYou
-                        ? 'Tú pagaste ${expense.amount.toStringAsFixed(2)} ${expense.currency}'
-                        : '${_memberName(expense.paidBy)} pagó ${expense.amount.toStringAsFixed(2)} ${expense.currency}',
+                        ? 'Tú pagaste ${ShareFormat.money(expense.amount, expense.currency)}'
+                        : '${_memberName(expense.paidBy)} pagó ${ShareFormat.money(expense.amount, expense.currency)}',
                     style: const TextStyle(fontSize: 11, color: Colors.black45),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -906,12 +907,12 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
           .where((s) => s.memberId == uid)
           .fold(0.0, (sum, s) => sum + s.shareAmount);
       final net = expense.amount - own;
-      return '${net.toStringAsFixed(2)} ${expense.currency}';
+      return ShareFormat.money(net, expense.currency);
     }
     final share = expense.splits
         .where((s) => s.memberId == uid)
         .fold(0.0, (sum, s) => sum + s.shareAmount);
-    return '${share.toStringAsFixed(2)} ${expense.currency}';
+    return ShareFormat.money(share, expense.currency);
   }
 
   // ─── build ────────────────────────────────────────────────────────────────

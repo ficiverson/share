@@ -4,6 +4,7 @@ import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Pantalla de estadísticas de gasto para un grupo.
 /// Recibe la lista de gastos ya cargada — no necesita presenter propio.
@@ -103,7 +104,7 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
               ),
               const SizedBox(width: 8),
               Text(
-                '${value.toStringAsFixed(2)} $currency',
+                ShareFormat.money(value, currency),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
@@ -287,7 +288,7 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
         _metricCard(
           icon: Icons.euro,
           label: 'Total gastado',
-          value: '${_totalSpent.toStringAsFixed(2)} $currency',
+          value: ShareFormat.money(_totalSpent, currency),
         ),
         _metricCard(
           icon: Icons.receipt_long,
@@ -297,21 +298,21 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
         _metricCard(
           icon: Icons.calculate,
           label: 'Importe medio',
-          value: '${avg.toStringAsFixed(2)} $currency',
+          value: ShareFormat.money(avg, currency),
         ),
         if (peakMonth != null)
           _metricCard(
             icon: Icons.trending_up,
             label: 'Mes punta',
             value: peakMonth,
-            sublabel: '${peakAmt.toStringAsFixed(2)} $currency',
+            sublabel: ShareFormat.money(peakAmt, currency),
           ),
         if (topCat != null)
           _metricCard(
             icon: ExpenseCategory.icon(topCat.key),
             label: 'Categoría top',
             value: topCat.key,
-            sublabel: '${topCat.value.toStringAsFixed(2)} $currency',
+            sublabel: ShareFormat.money(topCat.value, currency),
           ),
       ],
     );
@@ -362,7 +363,7 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
       children: [
         Text(
           '${entries.length} categorías · '
-          '${_totalSpent.toStringAsFixed(2)} ${widget.group.currency} total',
+          '${ShareFormat.money(_totalSpent, widget.group.currency)} total',
           style: const TextStyle(fontSize: 12, color: Colors.black45),
         ),
         const SizedBox(height: 16),
@@ -398,7 +399,7 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
             '${entries.length} meses · '
-            '${_totalSpent.toStringAsFixed(2)} ${widget.group.currency} total',
+            '${ShareFormat.money(_totalSpent, widget.group.currency)} total',
             style: const TextStyle(fontSize: 12, color: Colors.black45),
           ),
         ),

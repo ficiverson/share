@@ -6,6 +6,7 @@ import 'package:share_app/models/group.dart';
 import 'package:share_app/models/settlement.dart';
 import 'package:share_app/ui/balances/balances_presenter.dart';
 import 'package:share_app/utils/share_colors.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Pantalla "Saldos": balance neto por miembro, lista simplificada de
 /// "quién debe a quién" y historial de liquidaciones ya registradas.
@@ -181,9 +182,9 @@ class _BalancesViewState extends State<BalancesView> implements BalancesViewCont
                               ? ShareColors.negative
                               : null;
                       final label = isPositive
-                          ? 'Le deben ${net.toStringAsFixed(2)} $currency'
+                          ? 'Le deben ${ShareFormat.money(net, currency)}'
                           : isNegative
-                              ? 'Debe ${(-net).toStringAsFixed(2)} $currency'
+                              ? 'Debe ${ShareFormat.money(-net, currency)}'
                               : 'Al día';
                       return Card(
                         child: ListTile(
@@ -228,7 +229,7 @@ class _BalancesViewState extends State<BalancesView> implements BalancesViewCont
                                 '${_memberName(transfer.toMemberId)}',
                               ),
                               subtitle: Text(
-                                  '${transfer.amount.toStringAsFixed(2)} $currency'),
+                                  ShareFormat.money(transfer.amount, currency)),
                               trailing: TextButton(
                                 onPressed:
                                     _settling ? null : () => _confirmSettle(transfer),
@@ -256,7 +257,7 @@ class _BalancesViewState extends State<BalancesView> implements BalancesViewCont
                                 DateFormat('d MMM yyyy', 'es').format(s.date),
                               ),
                               trailing: Text(
-                                '${s.amount.toStringAsFixed(2)} $currency',
+                                ShareFormat.money(s.amount, currency),
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),

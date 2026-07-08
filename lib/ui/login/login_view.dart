@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/user.dart';
@@ -118,33 +119,35 @@ class _LoginViewState extends State<LoginView> implements LoginViewContract {
                       const SizedBox(height: 8),
                       const Text('Divide gastos con tus grupos'),
                       const SizedBox(height: 32),
-                      ElevatedButton.icon(
-                        onPressed: _presenter.signInWithGoogle,
-                        icon: const Icon(Icons.login),
-                        label: const Text('Iniciar sesión con Google'),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
+                      if (!kIsWeb) ...[
+                        ElevatedButton.icon(
+                          onPressed: _presenter.signInWithGoogle,
+                          icon: const Icon(Icons.login),
+                          label: const Text('Iniciar sesión con Google'),
                         ),
-                        onPressed: _presenter.signInWithApple,
-                        icon: const Icon(Icons.apple),
-                        label: const Text('Iniciar sesión con Apple'),
-                      ),
-                      const SizedBox(height: 24),
-                      const Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Text('o con email'),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
                           ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                          onPressed: _presenter.signInWithApple,
+                          icon: const Icon(Icons.apple),
+                          label: const Text('Iniciar sesión con Apple'),
+                        ),
+                        const SizedBox(height: 24),
+                        const Row(
+                          children: [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Text('o con email'),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       if (_registerMode) ...[
                         TextField(
                           controller: _nameController,
