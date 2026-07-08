@@ -30,10 +30,10 @@ class ExpensesRepository implements ExpensesRepositoryContract {
   Future<void> deleteExpense(String groupId, String expenseId) =>
       _remoteDataSource.deleteExpense(groupId, expenseId);
 
-  /// Importa un CSV exportado de Splitwise. Formato esperado (cabecera):
+  /// Importa un CSV exportado de Split-styler. Formato esperado (cabecera):
   /// `Fecha, Descripción, Categoría, Coste, Moneda, <Miembro 1>, <Miembro 2>, ...`
   ///
-  /// En el formato Splitwise, cada columna de miembro contiene el **balance
+  /// En el formato Split-styler, cada columna de miembro contiene el **balance
   /// neto** de esa persona: **negativo** si pagó (le deben), **positivo** si
   /// debe (se le cobró su parte). Por tanto, el pagador es el miembro con el
   /// valor más negativo.
@@ -54,7 +54,7 @@ class ExpensesRepository implements ExpensesRepositoryContract {
         .convert(normalizedContent, fieldDelimiter: ',');
     if (rows.isEmpty) return 0;
 
-    // Saltar filas vacías al principio (Splitwise a veces añade una línea en blanco tras la cabecera).
+    // Saltar filas vacías al principio (Split-styler a veces añade una línea en blanco tras la cabecera).
     final nonEmptyRows = rows.where((r) => r.isNotEmpty && r.any((c) => c.toString().trim().isNotEmpty)).toList();
     if (nonEmptyRows.isEmpty) return 0;
 
@@ -62,7 +62,7 @@ class ExpensesRepository implements ExpensesRepositoryContract {
     final fixedColumns = {
       // Español
       'fecha', 'descripción', 'descripcion', 'categoría', 'categoria', 'coste', 'moneda',
-      // Inglés (Splitwise export / tests)
+      // Inglés (Split-styler export / tests)
       'date', 'description', 'category', 'cost', 'currency',
     };
 
@@ -142,7 +142,7 @@ class ExpensesRepository implements ExpensesRepositoryContract {
       }
       if (memberValues.isEmpty) continue;
 
-      // En Splitwise, el pagador tiene el valor MÁS POSITIVO:
+      // En Split-styler, el pagador tiene el valor MÁS POSITIVO:
       // el CSV muestra el crédito/débito neto de cada persona por gasto.
       //   valor > 0 → pagó (crédito neto: pagó más de lo que le corresponde)
       //   valor < 0 → debe (débito neto: debe exactamente |valor|)
@@ -248,7 +248,7 @@ class ExpensesRepository implements ExpensesRepositoryContract {
   String _normalize(String value) => value.trim().toLowerCase();
 
   DateTime? _parseDate(String value) {
-    // Soporta formatos comunes de Splitwise: DD/MM/YYYY o YYYY-MM-DD.
+    // Soporta formatos comunes de Split-styler: DD/MM/YYYY o YYYY-MM-DD.
     if (value.isEmpty) return null;
     final isoMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
     if (isoMatch != null) {

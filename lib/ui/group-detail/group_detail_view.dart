@@ -24,7 +24,7 @@ import 'package:share_app/utils/share_format.dart';
 
 /// Pantalla de detalle de un grupo: datos del grupo, `groupId` (para
 /// invitar), miembros y lista de gastos en tiempo real. Permite añadir,
-/// editar y borrar gastos, e importar un CSV exportado de Splitwise.
+/// editar y borrar gastos, e importar un CSV exportado de Split-styler.
 class GroupDetailView extends StatefulWidget {
   final String groupId;
 
@@ -497,7 +497,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     }
   }
 
-  /// Extrae los nombres de columna de miembro del CSV de Splitwise.
+  /// Extrae los nombres de columna de miembro del CSV de Split-styler.
   /// Formato de cabecera: Fecha, Descripción, Categoría, Coste, Moneda, <M1>, <M2>...
   List<String> _parseCsvMemberColumns(String csvContent) {
     final normalized = csvContent.replaceAll('\r\n', '\n').replaceAll('\r', '\n');

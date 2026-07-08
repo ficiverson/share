@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Mapea la categoría de un gasto (string libre de Splitwise u otro origen)
+/// Mapea la categoría de un gasto (string libre de Split-styler u otro origen)
 /// a un [IconData] de Material para mostrar en la lista de gastos.
 class ExpenseCategory {
   ExpenseCategory._();
