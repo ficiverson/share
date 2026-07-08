@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_app/models/member.dart';
 
-/// Muestra un diálogo para asignar cada columna del CSV de Splitwise a un
+/// Muestra un diálogo para asignar cada columna del CSV de Split-styler a un
 /// miembro del grupo. Por defecto muestra el nombre de la columna CSV tal
 /// cual aparece en el CSV (para que el usuario pueda mantenerlo o cambiarlo).
 ///
@@ -68,7 +68,7 @@ class _CsvMappingDialogState extends State<CsvMappingDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Cada columna del CSV de Splitwise aparece aquí con su nombre original. '
+              'Cada columna del CSV de Split-styler aparece aquí con su nombre original. '
               'Asigna cada una al miembro del grupo que le corresponde.',
               style: TextStyle(fontSize: 13, color: Colors.black54),
             ),

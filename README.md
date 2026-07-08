@@ -1,46 +1,46 @@
-# Share — Divide gastos en grupo
+# Share — Group Expense Splitting
 
-App tipo Splitwise para repartir gastos con amigos y familia. Funciona en **web, Android e iOS** desde el mismo código Flutter. El backend es **Firebase** (Authentication + Cloud Firestore), por lo que cada persona que clone este repo crea su propia instancia independiente con sus propios datos.
+A Split-styler-style app for splitting expenses with friends and family. Runs on **web, Android, and iOS** from a single Flutter codebase. The backend is **Firebase** (Authentication + Cloud Firestore), so anyone who clones this repo gets their own independent instance with their own data.
 
 ---
 
-## Índice
+## Table of Contents
 
-1. [Requisitos previos](#1-requisitos-previos)
-2. [Crear el proyecto Firebase](#2-crear-el-proyecto-firebase)
-3. [Clonar y configurar el repo](#3-clonar-y-configurar-el-repo)
-4. [Conectar Firebase a Flutter](#4-conectar-firebase-a-flutter)
-5. [Configuración por plataforma](#5-configuración-por-plataforma)
+1. [Prerequisites](#1-prerequisites)
+2. [Create the Firebase project](#2-create-the-firebase-project)
+3. [Clone and set up the repo](#3-clone-and-set-up-the-repo)
+4. [Connect Firebase to Flutter](#4-connect-firebase-to-flutter)
+5. [Platform configuration](#5-platform-configuration)
    - [Web](#web)
    - [Android](#android)
    - [iOS](#ios)
-6. [Reglas de seguridad de Firestore](#6-reglas-de-seguridad-de-firestore)
-7. [Ejecutar en local](#7-ejecutar-en-local)
-8. [Desplegar en web (Firebase Hosting)](#8-desplegar-en-web-firebase-hosting)
-9. [Modelo de datos](#9-modelo-de-datos)
+6. [Firestore security rules](#6-firestore-security-rules)
+7. [Run locally](#7-run-locally)
+8. [Deploy to web (Firebase Hosting)](#8-deploy-to-web-firebase-hosting)
+9. [Data model](#9-data-model)
 
 ---
 
-## 1. Requisitos previos
+## 1. Prerequisites
 
-Instala las siguientes herramientas antes de empezar:
+Install the following tools before getting started:
 
-| Herramienta | Versión mínima | Descarga |
+| Tool | Minimum version | Download |
 |---|---|---|
 | Flutter SDK | 3.22+ | https://docs.flutter.dev/get-started/install |
-| Dart SDK | 3.4+ | incluido con Flutter |
+| Dart SDK | 3.4+ | included with Flutter |
 | Node.js | 18+ | https://nodejs.org |
-| Firebase CLI | última | `npm install -g firebase-tools` |
-| FlutterFire CLI | última | `dart pub global activate flutterfire_cli` |
-| Git | cualquiera | https://git-scm.com |
+| Firebase CLI | latest | `npm install -g firebase-tools` |
+| FlutterFire CLI | latest | `dart pub global activate flutterfire_cli` |
+| Git | any | https://git-scm.com |
 
-Para iOS necesitas además un Mac con Xcode 15+ y CocoaPods:
+For iOS you also need a Mac with Xcode 15+ and CocoaPods:
 
 ```bash
 sudo gem install cocoapods
 ```
 
-Verifica que todo está bien:
+Verify everything is working:
 
 ```bash
 flutter doctor
@@ -48,80 +48,80 @@ flutter doctor
 
 ---
 
-## 2. Crear el proyecto Firebase
+## 2. Create the Firebase project
 
-### 2.1 Crear el proyecto
+### 2.1 Create the project
 
-1. Ve a [console.firebase.google.com](https://console.firebase.google.com) e inicia sesión con tu cuenta de Google.
-2. Haz clic en **Añadir proyecto**.
-3. Elige un nombre (p.ej. `mi-share-app`) y sigue el wizard. Puedes desactivar Google Analytics si no lo necesitas.
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) and sign in with your Google account.
+2. Click **Add project**.
+3. Choose a name (e.g. `my-share-app`) and follow the wizard. You can disable Google Analytics if you don't need it.
 
-### 2.2 Habilitar Authentication
+### 2.2 Enable Authentication
 
-1. En el menú lateral: **Compilación → Authentication → Comenzar**.
-2. Ve a la pestaña **Método de inicio de sesión**.
-3. Habilita los proveedores que quieras usar:
-   - **Correo electrónico/contraseña** — siempre necesario.
-   - **Google** — para login con Google (web + Android + iOS).
-   - **Apple** — solo si quieres login con Apple en iOS.
+1. In the sidebar: **Build → Authentication → Get started**.
+2. Go to the **Sign-in method** tab.
+3. Enable the providers you want to use:
+   - **Email/Password** — always required.
+   - **Google** — for Google login (web + Android + iOS).
+   - **Apple** — only if you want Apple login on iOS.
 
-### 2.3 Habilitar Cloud Firestore
+### 2.3 Enable Cloud Firestore
 
-1. **Compilación → Firestore Database → Crear base de datos**.
-2. Selecciona **Iniciar en modo de producción** (las reglas de seguridad las pondremos en el paso 6).
-3. Elige una región cercana a tus usuarios (p.ej. `europe-west1`).
+1. **Build → Firestore Database → Create database**.
+2. Select **Start in production mode** (we'll add security rules in step 6).
+3. Choose a region close to your users (e.g. `europe-west1`).
 
-### 2.4 Habilitar Firebase Hosting (solo para web)
+### 2.4 Enable Firebase Hosting (web only)
 
-1. **Compilación → Hosting → Comenzar** y sigue los pasos del wizard.
-2. No hace falta configurar nada más aquí; lo haremos desde la CLI.
+1. **Build → Hosting → Get started** and follow the wizard steps.
+2. No additional configuration needed here; we'll do it from the CLI.
 
 ---
 
-## 3. Clonar y configurar el repo
+## 3. Clone and set up the repo
 
 ```bash
-git clone https://github.com/TU_USUARIO/share.git
+git clone https://github.com/YOUR_USERNAME/share.git
 cd share
 flutter pub get
 ```
 
 ---
 
-## 4. Conectar Firebase a Flutter
+## 4. Connect Firebase to Flutter
 
-Este es el paso más importante. FlutterFire CLI genera automáticamente el archivo `lib/firebase_options.dart` con las claves de **tu** proyecto Firebase.
+This is the most important step. The FlutterFire CLI automatically generates `lib/firebase_options.dart` with the keys for **your** Firebase project.
 
 ```bash
-# Inicia sesión en Firebase
+# Log in to Firebase
 firebase login
 
-# Conecta el proyecto (ejecutar desde la raíz del repo)
+# Connect the project (run from the repo root)
 flutterfire configure
 ```
 
-El comando te pedirá:
+The command will ask you to:
 
-- **Seleccionar proyecto**: elige el que creaste en el paso 2.
-- **Plataformas**: selecciona las que necesites (`web`, `android`, `ios`).
+- **Select a project**: choose the one you created in step 2.
+- **Platforms**: select the ones you need (`web`, `android`, `ios`).
 
-Al terminar habrá generado/actualizado:
+When it finishes, it will have generated/updated:
 
-- `lib/firebase_options.dart` — configuración Dart (para todas las plataformas)
-- `android/app/google-services.json` — configuración Android
-- `ios/Runner/GoogleService-Info.plist` — configuración iOS
+- `lib/firebase_options.dart` — Dart configuration (for all platforms)
+- `android/app/google-services.json` — Android configuration
+- `ios/Runner/GoogleService-Info.plist` — iOS configuration
 
-> ⚠️ **No compartas estos archivos** si tu repo es público. Añade `google-services.json` y `GoogleService-Info.plist` a `.gitignore`. `firebase_options.dart` solo contiene claves públicas del SDK pero por seguridad también puedes ignorarlo y que cada persona ejecute `flutterfire configure` en su máquina.
+> ⚠️ **Do not share these files** if your repo is public. Add `google-services.json` and `GoogleService-Info.plist` to `.gitignore`. `firebase_options.dart` only contains public SDK keys, but for safety you can also ignore it and have each person run `flutterfire configure` on their own machine.
 
 ---
 
-## 5. Configuración por plataforma
+## 5. Platform configuration
 
 ### Web
 
-No necesita configuración adicional. El login con Google en web funciona con un popup gestionado directamente por Firebase sin paquetes extra. En web, por diseño, solo se muestra el formulario de email/contraseña (Google y Apple se ocultan automáticamente con `kIsWeb`).
+No additional configuration needed. Google login on web works via a popup managed directly by Firebase, with no extra packages. On web, by design, only the email/password form is shown (Google and Apple buttons are automatically hidden with `kIsWeb`).
 
-Para probar en local:
+To test locally:
 
 ```bash
 flutter run -d chrome
@@ -131,26 +131,26 @@ flutter run -d chrome
 
 ### Android
 
-#### 5.1 Cambiar el Application ID
+#### 5.1 Change the Application ID
 
-Abre `android/app/build.gradle.kts` y cambia `com.example.share_app` por tu propio identificador:
+Open `android/app/build.gradle.kts` and replace `com.example.share_app` with your own identifier:
 
 ```kotlin
 android {
-    namespace = "com.tudominio.shareapp"
+    namespace = "com.yourdomain.shareapp"
     defaultConfig {
-        applicationId = "com.tudominio.shareapp"
+        applicationId = "com.yourdomain.shareapp"
         // ...
     }
 }
 ```
 
-#### 5.2 Registrar el SHA-1 en Firebase
+#### 5.2 Register the SHA-1 fingerprint in Firebase
 
-Google Sign-In en Android requiere que Firebase conozca la huella digital de tu keystore:
+Google Sign-In on Android requires Firebase to know your keystore's fingerprint:
 
 ```bash
-# Debug keystore (para desarrollo)
+# Debug keystore (for development)
 keytool -list -v \
   -keystore ~/.android/debug.keystore \
   -alias androiddebugkey \
@@ -158,32 +158,32 @@ keytool -list -v \
   -keypass android
 ```
 
-Copia el valor `SHA1` y pégalo en Firebase Console:
-**Configuración del proyecto (⚙️) → tu app Android → Añadir huella digital**.
+Copy the `SHA1` value and paste it in the Firebase Console:
+**Project settings (⚙️) → your Android app → Add fingerprint**.
 
-Después de añadirlo descarga el `google-services.json` actualizado y reemplázalo en `android/app/google-services.json`.
+After adding it, download the updated `google-services.json` and replace the file at `android/app/google-services.json`.
 
-#### 5.3 Añadir google_sign_in
+#### 5.3 Add google_sign_in
 
-El login con Google en móvil requiere el paquete `google_sign_in`. Añádelo a `pubspec.yaml`:
+Google login on mobile requires the `google_sign_in` package. Add it to `pubspec.yaml`:
 
 ```yaml
 dependencies:
   google_sign_in: ^6.2.1
 ```
 
-Luego abre `lib/remote-data-source/firebase/auth_remote_datasource.dart`, añade el import:
+Then open `lib/remote-data-source/firebase/auth_remote_datasource.dart`, add the import:
 
 ```dart
 import 'package:google_sign_in/google_sign_in.dart';
 ```
 
-Y reemplaza el bloque `if (!kIsWeb)` dentro de `signInWithGoogle()` con la implementación real:
+And replace the `if (!kIsWeb)` block inside `signInWithGoogle()` with the real implementation:
 
 ```dart
 if (!kIsWeb) {
   final googleUser = await GoogleSignIn().signIn();
-  if (googleUser == null) throw Exception('Cancelado por el usuario');
+  if (googleUser == null) throw Exception('Cancelled by user');
   final googleAuth = await googleUser.authentication;
   final credential = fb.GoogleAuthProvider.credential(
     accessToken: googleAuth.accessToken,
@@ -191,7 +191,7 @@ if (!kIsWeb) {
   );
   final userCredential = await _firebaseAuth.signInWithCredential(credential);
   final user = userCredential.user;
-  if (user == null) throw Exception('No se pudo obtener el usuario');
+  if (user == null) throw Exception('Could not retrieve user');
   return AppUser.fromFirebaseUser(user);
 }
 ```
@@ -200,37 +200,37 @@ if (!kIsWeb) {
 
 ### iOS
 
-#### 5.1 Cambiar el Bundle ID
+#### 5.1 Change the Bundle ID
 
-Abre `ios/Runner.xcworkspace` en Xcode:
-1. Selecciona el target **Runner** en el panel izquierdo.
-2. En la pestaña **General**, cambia el **Bundle Identifier** de `com.example.shareApp` a tu propio identificador (p.ej. `com.tudominio.shareapp`).
+Open `ios/Runner.xcworkspace` in Xcode:
+1. Select the **Runner** target in the left panel.
+2. Under the **General** tab, change the **Bundle Identifier** from `com.example.shareApp` to your own identifier (e.g. `com.yourdomain.shareapp`).
 
-Debe coincidir con el Bundle ID que registraste en Firebase Console al añadir la app iOS.
+It must match the Bundle ID you registered in the Firebase Console when adding the iOS app.
 
-#### 5.2 Configurar Google Sign-In en iOS
+#### 5.2 Configure Google Sign-In on iOS
 
-1. Descarga el `GoogleService-Info.plist` de Firebase Console (**Configuración del proyecto → tu app iOS**) y sustitúyelo en `ios/Runner/GoogleService-Info.plist`.
+1. Download the `GoogleService-Info.plist` from the Firebase Console (**Project settings → your iOS app**) and replace `ios/Runner/GoogleService-Info.plist`.
 
-2. Abre el archivo y copia el valor de `REVERSED_CLIENT_ID` (tiene la forma `com.googleusercontent.apps.XXXXXX`).
+2. Open the file and copy the `REVERSED_CLIENT_ID` value (it looks like `com.googleusercontent.apps.XXXXXX`).
 
-3. En Xcode: **Runner → Info → URL Types → +** y pega el `REVERSED_CLIENT_ID` en el campo **URL Schemes**.
+3. In Xcode: **Runner → Info → URL Types → +** and paste the `REVERSED_CLIENT_ID` into the **URL Schemes** field.
 
-4. Añade `google_sign_in` al `pubspec.yaml` (igual que en la sección Android 5.3) y aplica la misma implementación en `auth_remote_datasource.dart`.
+4. Add `google_sign_in` to `pubspec.yaml` (same as in Android section 5.3) and apply the same implementation in `auth_remote_datasource.dart`.
 
-#### 5.3 Configurar Apple Sign-In en iOS
+#### 5.3 Configure Apple Sign-In on iOS
 
-Apple Sign-In solo funciona en dispositivos Apple y requiere una cuenta de Apple Developer ($99/año).
+Apple Sign-In only works on Apple devices and requires an Apple Developer account ($99/year).
 
-1. En [developer.apple.com](https://developer.apple.com): **Certificates, IDs & Profiles → Identifiers → tu App ID** → activa **Sign In with Apple**.
+1. At [developer.apple.com](https://developer.apple.com): **Certificates, IDs & Profiles → Identifiers → your App ID** → enable **Sign In with Apple**.
 
-2. En Firebase Console: **Authentication → Sign-in method → Apple** → configura con tu Service ID y las claves que Apple te proporciona.
+2. In the Firebase Console: **Authentication → Sign-in method → Apple** → configure with your Service ID and the keys Apple provides.
 
-3. En Xcode: **Runner → Signing & Capabilities → + Capability → Sign In with Apple**.
+3. In Xcode: **Runner → Signing & Capabilities → + Capability → Sign In with Apple**.
 
-El código ya gestiona el flujo completo de Apple Sign-In con nonce seguro en `auth_remote_datasource.dart`.
+The code already handles the full Apple Sign-In flow with a secure nonce in `auth_remote_datasource.dart`.
 
-#### 5.4 Instalar pods
+#### 5.4 Install pods
 
 ```bash
 cd ios
@@ -240,28 +240,28 @@ cd ..
 
 ---
 
-## 6. Reglas de seguridad de Firestore
+## 6. Firestore security rules
 
-Aplica estas reglas en **Firebase Console → Firestore → Reglas** para que solo los miembros de un grupo puedan acceder a sus datos:
+Apply these rules in **Firebase Console → Firestore → Rules** so that only group members can access their data:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /groups/{groupId} {
-      // Crear grupo: el creador debe incluirse en memberIds
+      // Create group: the creator must include themselves in memberIds
       allow create: if request.auth != null
         && request.auth.uid in request.resource.data.memberIds;
 
-      // Leer y modificar: solo miembros actuales
+      // Read and modify: current members only
       allow read, update: if request.auth != null
         && request.auth.uid in resource.data.memberIds;
 
-      // Borrar: solo el creador
+      // Delete: creator only
       allow delete: if request.auth != null
         && request.auth.uid == resource.data.createdBy;
 
-      // Subcolecciones (expenses, settlements): solo miembros del grupo
+      // Subcollections (expenses, settlements): group members only
       match /{subcollection=**}/{docId} {
         allow read, write: if request.auth != null
           && request.auth.uid in get(
@@ -273,66 +273,66 @@ service cloud.firestore {
 }
 ```
 
-Haz clic en **Publicar** para activarlas.
+Click **Publish** to activate them.
 
 ---
 
-## 7. Ejecutar en local
+## 7. Run locally
 
 ```bash
 # Web
 flutter run -d chrome
 
-# Android (con emulador o dispositivo conectado por USB)
+# Android (with emulator or USB-connected device)
 flutter run -d android
 
-# iOS (solo en Mac con Xcode configurado)
+# iOS (Mac with Xcode configured only)
 flutter run -d ios
 
-# Ver todos los dispositivos disponibles
+# List all available devices
 flutter devices
 ```
 
 ---
 
-## 8. Desplegar en web (Firebase Hosting)
+## 8. Deploy to web (Firebase Hosting)
 
-### Primera vez
+### First time
 
 ```bash
 firebase init hosting
 ```
 
-Responde al wizard:
+Answer the wizard:
 - **Public directory**: `build/web`
 - **Single-page app (rewrite all URLs to /index.html)**: `Yes`
 - **Overwrite build/web/index.html**: `No`
 
-### Publicar
+### Publish
 
 ```bash
 flutter build web --release && firebase deploy --only hosting
 ```
 
-Tu app quedará disponible en `https://TU-PROYECTO.web.app`.
+Your app will be available at `https://YOUR-PROJECT.web.app`.
 
-### Dominio personalizado (opcional, también gratuito)
+### Custom domain (optional, also free)
 
-En Firebase Console → Hosting → **Añadir dominio personalizado** y sigue los pasos para verificar la propiedad del dominio y configurar los registros DNS.
+In Firebase Console → Hosting → **Add custom domain** and follow the steps to verify domain ownership and configure your DNS records.
 
 ---
 
-## 9. Modelo de datos
+## 9. Data model
 
-La estructura de colecciones en Firestore:
+Firestore collection structure:
 
 ```
 groups/{groupId}
   ├── name: string
   ├── currency: string          ("EUR", "USD", …)
-  ├── createdBy: string         (uid del creador)
+  ├── createdBy: string         (creator's uid)
   ├── createdAt: timestamp
-  ├── memberIds: string[]       (array de uids — usado en reglas de seguridad)
+  ├── memberIds: string[]       (array of uids — used in security rules)
   └── members: map[]
         ├── memberId: string
         ├── name: string
@@ -346,8 +346,8 @@ groups/{groupId}/expenses/{expenseId}
   ├── amount: number
   ├── currency: string
   ├── category: string
-  ├── paidBy: string            (uid del pagador principal)
-  ├── payments: map[]           (pagadores múltiples, vacío si paga uno solo)
+  ├── paidBy: string            (primary payer's uid)
+  ├── payments: map[]           (multiple payers; empty if one person pays)
   │     ├── memberId: string
   │     ├── shareAmount: number
   │     └── shareType: string
@@ -355,14 +355,14 @@ groups/{groupId}/expenses/{expenseId}
   ├── createdAt: timestamp
   ├── createdBy: string
   ├── notes: string
-  └── splits: map[]             (reparto entre miembros)
+  └── splits: map[]             (how the expense is split among members)
         ├── memberId: string
         ├── shareAmount: number
         └── shareType: string   ("equal" | "exact" | "percentage")
 
 groups/{groupId}/settlements/{settlementId}
-  ├── fromMemberId: string      (quien paga)
-  ├── toMemberId: string        (quien cobra)
+  ├── fromMemberId: string      (who pays)
+  ├── toMemberId: string        (who receives)
   ├── amount: number
   ├── currency: string
   ├── date: timestamp
@@ -371,20 +371,20 @@ groups/{groupId}/settlements/{settlementId}
 
 ---
 
-## Funcionalidades
+## Features
 
-- **Autenticación**: email/contraseña en todas las plataformas; Google y Apple en móvil; solo email en web.
-- **Grupos**: crear, unirse por ID, invitar miembros, editar nombre y moneda, salir, borrar.
-- **Gastos**: añadir, editar, borrar; reparto igual o personalizado por miembro; pago único o compartido entre varios.
-- **Balances**: cálculo automático de quién debe a quién con simplificación de deudas.
-- **Liquidaciones**: registrar pagos entre miembros para saldar deudas.
-- **CSV**: importar desde Splitwise, exportar gastos del grupo.
-- **Estadísticas**: gráficas por categoría y por mes.
-- **Modo oscuro**: automático según el sistema operativo.
-- **Soporte offline**: Firestore persiste datos en caché local.
+- **Authentication**: email/password on all platforms; Google and Apple on mobile; email only on web.
+- **Groups**: create, join by ID, invite members, edit name and currency, leave, delete.
+- **Expenses**: add, edit, delete; equal or custom split per member; single or shared payment among multiple payers.
+- **Balances**: automatic calculation of who owes whom, with debt simplification.
+- **Settlements**: record payments between members to settle debts.
+- **CSV**: import from Split-styler, export group expenses.
+- **Statistics**: charts by category and by month.
+- **Dark mode**: automatic based on the operating system.
+- **Offline support**: Firestore persists data in local cache.
 
 ---
 
-## Licencia
+## License
 
 MIT

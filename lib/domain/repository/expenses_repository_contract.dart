@@ -16,7 +16,7 @@ abstract class ExpensesRepositoryContract {
 
   Future<void> deleteExpense(String groupId, String expenseId);
 
-  /// Importa un CSV exportado de Splitwise (ver sección 4 del plan):
+  /// Importa un CSV exportado de Split-styler (ver sección 4 del plan):
   /// `Fecha, Descripción, Categoría, Coste, Moneda, <Miembro 1>, <Miembro 2>, ...`
   /// y crea un documento de gasto (con sus `splits`) por cada fila.
   ///

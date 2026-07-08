@@ -67,7 +67,7 @@ class AppLocalizations {
       'paidBy': 'Pagado por',
       'date': 'Fecha',
       'notes': 'Notas',
-      'importCsv': 'Importar CSV de Splitwise',
+      'importCsv': 'Importar CSV de Split-styler',
       'expenseDeleted': 'Gasto eliminado',
       'expenseSaved': 'Gasto guardado',
       // Balances
@@ -131,7 +131,7 @@ class AppLocalizations {
       'paidBy': 'Paid by',
       'date': 'Date',
       'notes': 'Notes',
-      'importCsv': 'Import Splitwise CSV',
+      'importCsv': 'Import Split-styler CSV',
       'expenseDeleted': 'Expense deleted',
       'expenseSaved': 'Expense saved',
       // Balances
