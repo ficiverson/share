@@ -5,6 +5,27 @@ import 'package:flutter/material.dart';
 class ExpenseCategory {
   ExpenseCategory._();
 
+  /// Categorías predefinidas con su icono. El orden determina cómo aparecen en el formulario.
+  static const Map<String, IconData> predefined = {
+    'Comida': Icons.restaurant,
+    'Bar': Icons.local_bar,
+    'Hogar': Icons.chair,
+    'Internet': Icons.wifi,
+    'Mantenimiento': Icons.build,
+    'Transporte': Icons.directions_car,
+    'Ocio': Icons.movie,
+    'Salud': Icons.medical_services,
+    'Ropa': Icons.checkroom,
+    'Viaje': Icons.flight,
+    'Deporte': Icons.fitness_center,
+    'Mascotas': Icons.pets,
+    'Educación': Icons.school,
+    'Finanzas': Icons.account_balance,
+    'Regalos': Icons.card_giftcard,
+    'Farmacia': Icons.local_pharmacy,
+    'Limpieza': Icons.cleaning_services,
+  };
+
   static IconData icon(String category) {
     final c = category.trim().toLowerCase();
 
