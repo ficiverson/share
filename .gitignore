@@ -129,3 +129,4 @@ lib/firebase_options.dart
 firebase.json
 .firebase/hosting.YnVpbGQvd2Vi.cache
 .firebaserc
+firepit-log.txt

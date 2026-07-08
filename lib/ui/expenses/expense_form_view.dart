@@ -4,6 +4,7 @@ import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/split.dart';
 import 'package:share_app/ui/expenses/expense_form_presenter.dart';
+import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
 import 'package:share_app/utils/share_format.dart';
 
@@ -309,9 +310,46 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
             const SizedBox(height: 8),
 
             // ── Categoría ─────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Categoría',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: ExpenseCategory.predefined.entries.map((entry) {
+                final selected = _categoryController.text.trim().toLowerCase() ==
+                    entry.key.toLowerCase();
+                return FilterChip(
+                  avatar: Icon(
+                    entry.value,
+                    size: 16,
+                    color: selected ? ShareColors.primary : null,
+                  ),
+                  label: Text(entry.key),
+                  selected: selected,
+                  selectedColor: ShareColors.primary.withOpacity(0.15),
+                  checkmarkColor: ShareColors.primary,
+                  onSelected: (_) => setState(() {
+                    _categoryController.text = selected ? '' : entry.key;
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: _categoryController,
-              decoration: const InputDecoration(labelText: 'Categoría'),
+              decoration: const InputDecoration(
+                labelText: 'O escribe una categoría personalizada',
+                prefixIcon: Icon(Icons.edit_outlined, size: 18),
+              ),
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),
 

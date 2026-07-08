@@ -148,7 +148,7 @@ class _LoginViewState extends State<LoginView> implements LoginViewContract {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      if (_registerMode) ...[
+                      if (!kIsWeb && _registerMode) ...[
                         TextField(
                           controller: _nameController,
                           decoration: const InputDecoration(labelText: 'Nombre'),
@@ -169,20 +169,22 @@ class _LoginViewState extends State<LoginView> implements LoginViewContract {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _submitEmailForm,
-                        child: Text(_registerMode ? 'Crear cuenta' : 'Iniciar sesión'),
+                        child: Text(!kIsWeb && _registerMode ? 'Crear cuenta' : 'Iniciar sesión'),
                       ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _registerMode = !_registerMode;
-                          _error = null;
-                        }),
-                        child: Text(
-                          _registerMode
-                              ? '¿Ya tienes cuenta? Inicia sesión'
-                              : '¿No tienes cuenta? Regístrate',
+                      if (!kIsWeb) ...[
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _registerMode = !_registerMode;
+                            _error = null;
+                          }),
+                          child: Text(
+                            _registerMode
+                                ? '¿Ya tienes cuenta? Inicia sesión'
+                                : '¿No tienes cuenta? Regístrate',
+                          ),
                         ),
-                      ),
+                      ],
                       if (_error != null) ...[
                         const SizedBox(height: 16),
                         Text(
