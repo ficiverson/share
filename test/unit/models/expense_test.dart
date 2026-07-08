@@ -123,7 +123,7 @@ void main() {
     });
 
     test('constructor acepta payments no vacíos', () {
-      final e = _make()..payments; // acceso compile-check
+      expect(_make().payments, isEmpty); // compile-check del getter
       final e2 = Expense(
         expenseId: 'e1',
         description: 'Cena',

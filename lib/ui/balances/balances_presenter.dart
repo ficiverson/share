@@ -55,14 +55,14 @@ class BalancesPresenter {
   void _loadBalances(String groupId) {
     invoker.execute(getBalancesUseCase.withParams(groupId)).listen((balancesResult) {
       if (balancesResult is Error) {
-        _view.onBalancesError((balancesResult as Error).getError());
+        _view.onBalancesError(balancesResult.getError());
         return;
       }
       final balances = (balancesResult as Success).getData() as List<MemberBalance>;
 
       invoker.execute(calculateBalancesUseCase.withParams(groupId)).listen((transfersResult) {
         if (transfersResult is Error) {
-          _view.onBalancesError((transfersResult as Error).getError());
+          _view.onBalancesError(transfersResult.getError());
           return;
         }
         final transfers = (transfersResult as Success).getData() as List<DebtTransfer>;

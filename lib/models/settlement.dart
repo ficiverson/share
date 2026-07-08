@@ -5,6 +5,7 @@ class Settlement {
   final String fromMemberId;
   final String toMemberId;
   final double amount;
+  final String currency;
   final DateTime date;
   final String notes;
 
@@ -13,6 +14,7 @@ class Settlement {
     required this.fromMemberId,
     required this.toMemberId,
     required this.amount,
+    this.currency = 'EUR',
     required this.date,
     this.notes = '',
   });
@@ -22,6 +24,7 @@ class Settlement {
         fromMemberId: map['fromMemberId'] as String? ?? '',
         toMemberId: map['toMemberId'] as String? ?? '',
         amount: (map['amount'] as num?)?.toDouble() ?? 0,
+        currency: map['currency'] as String? ?? 'EUR',
         date: map['date'] != null ? DateTime.parse(map['date'] as String) : DateTime.now(),
         notes: map['notes'] as String? ?? '',
       );
@@ -30,6 +33,7 @@ class Settlement {
         'fromMemberId': fromMemberId,
         'toMemberId': toMemberId,
         'amount': amount,
+        'currency': currency,
         'date': date.toIso8601String(),
         'notes': notes,
       };
