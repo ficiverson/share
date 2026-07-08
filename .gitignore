@@ -127,3 +127,5 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 lib/firebase_options.dart
 firebase.json
+.firebase/hosting.YnVpbGQvd2Vi.cache
+.firebaserc
