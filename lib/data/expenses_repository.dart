@@ -59,7 +59,12 @@ class ExpensesRepository implements ExpensesRepositoryContract {
     if (nonEmptyRows.isEmpty) return 0;
 
     final header = nonEmptyRows.first.map((c) => c.toString().trim()).toList();
-    final fixedColumns = {'fecha', 'descripción', 'descripcion', 'categoría', 'categoria', 'coste', 'moneda'};
+    final fixedColumns = {
+      // Español
+      'fecha', 'descripción', 'descripcion', 'categoría', 'categoria', 'coste', 'moneda',
+      // Inglés (Splitwise export / tests)
+      'date', 'description', 'category', 'cost', 'currency',
+    };
 
     // Identificar índices de columnas que no son fijas (= columnas de miembros en el CSV).
     final csvMemberIndices = <int>[];
@@ -97,11 +102,26 @@ class ExpensesRepository implements ExpensesRepositoryContract {
       }
     }
 
-    final dateIndex = header.indexWhere((h) => _normalize(h) == 'fecha');
-    final descriptionIndex = header.indexWhere((h) => _normalize(h).startsWith('descripci'));
-    final categoryIndex = header.indexWhere((h) => _normalize(h).startsWith('categor'));
-    final costIndex = header.indexWhere((h) => _normalize(h) == 'coste');
-    final currencyIndex = header.indexWhere((h) => _normalize(h) == 'moneda');
+    final dateIndex = header.indexWhere((h) {
+      final n = _normalize(h);
+      return n == 'fecha' || n == 'date';
+    });
+    final descriptionIndex = header.indexWhere((h) {
+      final n = _normalize(h);
+      return n.startsWith('descripci') || n == 'description';
+    });
+    final categoryIndex = header.indexWhere((h) {
+      final n = _normalize(h);
+      return n.startsWith('categor') || n == 'category';
+    });
+    final costIndex = header.indexWhere((h) {
+      final n = _normalize(h);
+      return n == 'coste' || n == 'cost';
+    });
+    final currencyIndex = header.indexWhere((h) {
+      final n = _normalize(h);
+      return n == 'moneda' || n == 'currency';
+    });
 
     final expensesToImport = <Expense>[];
     final now = DateTime.now();
