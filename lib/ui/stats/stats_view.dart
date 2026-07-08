@@ -58,21 +58,6 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
     return entries;
   }
 
-  /// Gasto total pagado por cada miembro, ordenado de mayor a menor.
-  List<MapEntry<String, double>> get _byMember {
-    final map = <String, double>{};
-    for (final e in widget.expenses) {
-      map[e.paidBy] = (map[e.paidBy] ?? 0) + e.amount;
-    }
-    final entries = map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return entries;
-  }
-
-  String _memberName(String memberId) {
-    final m = widget.group.members.where((m) => m.memberId == memberId);
-    return m.isEmpty ? memberId : m.first.name;
-  }
-
   double get _totalSpent =>
       widget.expenses.fold(0.0, (sum, e) => sum + e.amount);
 
@@ -382,7 +367,6 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
   }
 
   int _expenseCountForCategory(String category) {
-    final cat = category == 'Sin categoría' ? '' : category;
     return widget.expenses
         .where((e) => (e.category.isEmpty ? 'Sin categoría' : e.category) == category)
         .length;

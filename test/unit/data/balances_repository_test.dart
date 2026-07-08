@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:share_app/data/balances_repository.dart';
 import 'package:share_app/data/datasource/firestore_remote_datasource_contract.dart';
-import 'package:share_app/models/balance.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/member.dart';

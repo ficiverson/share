@@ -476,12 +476,6 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     return isOwner || isCreator || isPayer;
   }
 
-  Future<void> _editExpense(Expense expense) async {
-    final group = _group;
-    if (group == null) return;
-    await ExpenseFormRouter.open(context, group, expense: expense);
-  }
-
   Future<void> _deleteExpense(Expense expense) async {
     final confirmed = await showDialog<bool>(
       context: context,

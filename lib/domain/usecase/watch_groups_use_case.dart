@@ -1,6 +1,5 @@
 import 'package:share_app/domain/invoker/base_use_case.dart';
 import 'package:share_app/domain/repository/groups_repository_contract.dart';
-import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/models/group.dart';
 
 /// Devuelve un `Stream` con los grupos del usuario (`uid` como parámetro).

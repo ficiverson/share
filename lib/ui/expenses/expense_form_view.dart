@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' hide Split;
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
-import 'package:share_app/models/member.dart';
 import 'package:share_app/models/split.dart';
 import 'package:share_app/ui/expenses/expense_form_presenter.dart';
 import 'package:share_app/utils/share_colors.dart';
@@ -265,7 +264,6 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     final members = widget.group.members;
     final isEdit = widget.expense != null;
     final selectedMembers = members.where((m) => _selectedMemberIds.contains(m.memberId)).toList();
-    final payingMembers = members.where((m) => _payingMemberIds.contains(m.memberId)).toList();
     final currency = _currencyController.text.trim().isNotEmpty
         ? _currencyController.text.trim().toUpperCase()
         : widget.group.currency;
