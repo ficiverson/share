@@ -6,6 +6,7 @@ import 'package:share_app/models/member.dart';
 import 'package:share_app/models/split.dart';
 import 'package:share_app/ui/expenses/expense_form_presenter.dart';
 import 'package:share_app/utils/share_colors.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Formulario de alta/edición de un gasto.
 /// Soporta reparto igual o personalizado entre miembros,
@@ -189,7 +190,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       }
       if ((total - amount).abs() > 0.02) {
         setState(() => _error =
-            'La suma del reparto (${total.toStringAsFixed(2)}) no coincide con el total (${amount.toStringAsFixed(2)})');
+            'La suma del reparto (${ShareFormat.amount(total)}) no coincide con el total (${ShareFormat.amount(amount)})');
         return;
       }
       splits = customSplits;
@@ -222,7 +223,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
       }
       if ((total - amount).abs() > 0.02) {
         setState(() => _error =
-            'La suma de los pagos (${total.toStringAsFixed(2)}) no coincide con el total (${amount.toStringAsFixed(2)})');
+            'La suma de los pagos (${ShareFormat.amount(total)}) no coincide con el total (${ShareFormat.amount(amount)})');
         return;
       }
       payments = paymentList;
@@ -436,7 +437,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Pagado: ${total.toStringAsFixed(2)} / ${target.toStringAsFixed(2)}',
+                              'Pagado: ${ShareFormat.amount(total)} / ${ShareFormat.amount(target)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: ok ? Colors.green : ShareColors.error,
@@ -530,7 +531,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Suma: ${total.toStringAsFixed(2)} / ${target.toStringAsFixed(2)}',
+                        'Suma: ${ShareFormat.amount(total)} / ${ShareFormat.amount(target)}',
                         style: TextStyle(
                           fontSize: 12,
                           color: ok ? Colors.green : ShareColors.error,

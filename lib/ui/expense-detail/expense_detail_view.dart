@@ -8,6 +8,7 @@ import 'package:share_app/models/group.dart';
 import 'package:share_app/ui/expenses/expense_form_router.dart';
 import 'package:share_app/utils/expense_category.dart';
 import 'package:share_app/utils/share_colors.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Pantalla de detalle de un gasto — solo lectura.
 /// Muestra descripción, importe, pagador, fecha, categoría, notas y reparto.
@@ -95,7 +96,6 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
     final group = widget.group;
     final icon = ExpenseCategory.icon(expense.category);
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'es').format(expense.date);
-    final fmt = NumberFormat.currency(symbol: '${expense.currency} ', decimalDigits: 2);
 
     // Cualquier miembro del grupo puede editar cualquier gasto.
 
@@ -175,7 +175,7 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    fmt.format(expense.amount),
+                    ShareFormat.money(expense.amount, expense.currency),
                     style: textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: ShareColors.primary,
@@ -204,7 +204,7 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
                     label: 'Pagaron',
                     value: expense.payments
                         .map((p) =>
-                            '${_memberName(p.memberId)}: ${fmt.format(p.shareAmount)}')
+                            '${_memberName(p.memberId)}: ${ShareFormat.money(p.shareAmount, expense.currency)}')
                         .join('\n'),
                   ),
                 const Divider(height: 1, indent: 56),
@@ -320,7 +320,6 @@ class _SplitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(symbol: '$currency ', decimalDigits: 2);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -347,7 +346,7 @@ class _SplitRow extends StatelessWidget {
             ),
           ),
           Text(
-            fmt.format(amount),
+            ShareFormat.money(amount, currency),
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: isPayer ? ShareColors.primary : null,

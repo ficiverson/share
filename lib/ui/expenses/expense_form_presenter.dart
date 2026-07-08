@@ -5,6 +5,7 @@ import 'package:share_app/domain/usecase/add_expense_use_case.dart';
 import 'package:share_app/domain/usecase/edit_expense_use_case.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
+import 'package:share_app/utils/share_format.dart';
 
 /// Vista abstracta que implementa el widget `ExpenseFormView`.
 abstract class ExpenseFormViewContract {
@@ -65,8 +66,7 @@ class ExpenseFormPresenter {
 
     final payload = {
       'title': 'Nuevo gasto en ${group.name}',
-      'body': '$payerName pagó ${expense.description} · '
-          '${expense.amount.toStringAsFixed(2)} ${expense.currency}',
+      'body': '$payerName pagó ${expense.description} · ${ShareFormat.money(expense.amount, expense.currency)}',
       'groupId': group.groupId,
       'expenseId': expense.expenseId,
     };
