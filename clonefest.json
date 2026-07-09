@@ -24,7 +24,7 @@
   "published_at": "2026-06-12",
   "updated_at": "2026-07-08",
   "icon": "icon.png",
-  "screenshots": [],
+  "screenshots": ["screenshots/app-1.png","screenshots/app-2.png","screenshots/app-3.png"],
   "platforms": ["web", "android", "ios"],
   "stack": {
     "frontend": { "framework": "flutter", "language": "dart", "min_version": "3.22" },
