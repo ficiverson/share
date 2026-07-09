@@ -1,0 +1,73 @@
+{
+  "$schema": "https://ficiverson.github.io/open-clone-marketplace/spec/clonefest.schema.json",
+  "clonefest": "1.0",
+  "id": "share",
+  "name": "Share",
+  "clone_of": "Split payments app",
+  "category": "finance",
+  "tagline": {
+    "en": "Split group expenses with friends and family. Your data, your Firebase.",
+    "es": "Divide gastos en grupo con amigos y familia. Tus datos, tu Firebase."
+  },
+  "description": {
+    "en": "App for splitting expenses in groups. Runs on web, Android and iOS from a single Flutter codebase. Backend is Firebase (Auth + Firestore), so every person who deploys it gets a fully independent instance with their own data.",
+    "es": "App para dividir gastos en grupo. Funciona en web, Android e iOS desde un único código Flutter. El backend es Firebase (Auth + Firestore): cada persona que la despliega obtiene una instancia independiente con sus propios datos."
+  },
+  "owner": {
+    "name": "Fernando Souto Gonzalez",
+    "github": "ficiverson",
+    "email": "efexepe@gmail.com"
+  },
+  "repo": "https://github.com/ficiverson/share",
+  "license": "MIT",
+  "version": "0.1.0+1",
+  "published_at": "2026-06-12",
+  "updated_at": "2026-07-08",
+  "icon": "icon.png",
+  "screenshots": [],
+  "platforms": ["web", "android", "ios"],
+  "stack": {
+    "frontend": { "framework": "flutter", "language": "dart", "min_version": "3.22" },
+    "backend": {
+      "provider": "firebase",
+      "services": ["auth", "firestore", "hosting"],
+      "auth_providers": ["email_password", "google", "apple"]
+    }
+  },
+  "requirements": {
+    "tools": [
+      { "name": "flutter", "min_version": "3.22", "install": "https://docs.flutter.dev/get-started/install" },
+      { "name": "node", "min_version": "18", "install": "https://nodejs.org" },
+      { "name": "firebase-tools", "install": "npm install -g firebase-tools" },
+      { "name": "flutterfire_cli", "install": "dart pub global activate flutterfire_cli" },
+      { "name": "git", "install": "https://git-scm.com" }
+    ],
+    "accounts": [
+      { "name": "Google / Firebase", "url": "https://console.firebase.google.com", "cost": "free tier (Spark) is enough for web" }
+    ],
+    "platform_extras": {
+      "ios": ["macOS with Xcode 15+", "CocoaPods (sudo gem install cocoapods)", "Apple Developer account for device/App Store"]
+    }
+  },
+  "deploy": {
+    "target": "firebase-hosting",
+    "estimated_minutes": 30,
+    "steps": [
+      { "id": "clone", "type": "shell", "run": "git clone https://github.com/ficiverson/share.git && cd share", "title": { "en": "Clone the repository", "es": "Clona el repositorio" } },
+      { "id": "firebase-project", "type": "manual", "url": "https://console.firebase.google.com", "title": { "en": "Create a Firebase project and enable Authentication (Email/Password + Google) and Cloud Firestore (production mode)", "es": "Crea un proyecto Firebase y activa Authentication (Email/Password + Google) y Cloud Firestore (modo producción)" } },
+      { "id": "firebase-login", "type": "shell", "run": "firebase login", "title": { "en": "Log in to Firebase CLI", "es": "Inicia sesión en Firebase CLI" } },
+      { "id": "flutterfire", "type": "shell", "run": "flutterfire configure", "title": { "en": "Link the app to YOUR Firebase project (regenerates firebase_options.dart)", "es": "Conecta la app a TU proyecto Firebase (regenera firebase_options.dart)" } },
+      { "id": "deps", "type": "shell", "run": "flutter pub get", "title": { "en": "Install dependencies", "es": "Instala dependencias" } },
+      { "id": "rules", "type": "manual", "doc": "README.md#6-firestore-security-rules", "title": { "en": "Apply the Firestore security rules from README section 6", "es": "Aplica las reglas de seguridad de Firestore de la sección 6 del README" } },
+      { "id": "test-local", "type": "shell", "run": "flutter run -d chrome", "optional": true, "title": { "en": "Run locally to verify", "es": "Ejecuta en local para verificar" } },
+      { "id": "build", "type": "shell", "run": "flutter build web --release", "title": { "en": "Build the web app", "es": "Compila la app web" } },
+      { "id": "deploy", "type": "shell", "run": "firebase deploy --only hosting", "title": { "en": "Deploy to Firebase Hosting", "es": "Despliega a Firebase Hosting" } }
+    ],
+    "verify": {
+      "en": "Open https://<your-project-id>.web.app, create an account, create a group and add an expense.",
+      "es": "Abre https://<tu-project-id>.web.app, crea una cuenta, crea un grupo y añade un gasto."
+    }
+  },
+  "docs": { "readme": "README.md", "data_model": "README.md#9-data-model" },
+  "support": { "issues": "https://github.com/ficiverson/share/issues" }
+}
