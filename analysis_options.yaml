@@ -8,3 +8,5 @@ linter:
 analyzer:
   exclude:
     - "**/*.g.dart"
+    - build/**
+    - "**/generated_plugin_registrant.dart"
