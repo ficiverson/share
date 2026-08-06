@@ -60,6 +60,35 @@ class BalancesRepository implements BalancesRepositoryContract {
   }
 
   @override
+  Future<MemberBalance> getUserBalance(String groupId, String uid) async {
+    final expenses = await _remoteDataSource.getExpenses(groupId);
+    final settlements = await _remoteDataSource.watchSettlements(groupId).first;
+
+    double paid = 0;
+    double owed = 0;
+
+    for (final expense in expenses) {
+      if (expense.payments.isNotEmpty) {
+        paid += expense.payments
+            .where((p) => p.memberId == uid)
+            .fold(0.0, (s, p) => s + p.shareAmount);
+      } else if (expense.paidBy == uid) {
+        paid += expense.amount;
+      }
+      owed += expense.splits
+          .where((s) => s.memberId == uid)
+          .fold(0.0, (s, sp) => s + sp.shareAmount);
+    }
+
+    for (final settlement in settlements) {
+      if (settlement.fromMemberId == uid) paid += settlement.amount;
+      if (settlement.toMemberId == uid) owed += settlement.amount;
+    }
+
+    return MemberBalance(memberId: uid, paid: paid, owed: owed);
+  }
+
+  @override
   Stream<List<Settlement>> watchSettlements(String groupId) =>
       _remoteDataSource.watchSettlements(groupId);
 

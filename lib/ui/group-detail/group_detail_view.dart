@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/export_csv_use_case.dart';
 import 'package:share_app/injector/dependency_injector.dart';
+import 'package:share_app/models/balance.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/member.dart';
@@ -40,6 +41,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
 
   Group? _group;
   List<Expense>? _expenses;
+  MemberBalance? _userBalance;
   String? _error;
   bool _actionLoading = false;
 
@@ -95,8 +97,10 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
       leaveGroupUseCase: injector.leaveGroupUseCase,
       editGroupUseCase: injector.editGroupUseCase,
       deleteGroupUseCase: injector.deleteGroupUseCase,
+      getUserBalanceUseCase: injector.getUserBalanceUseCase,
     );
-    _presenter.watchGroup(widget.groupId);
+    final uid = injector.authRepository.getCurrentUser()?.id;
+    _presenter.watchGroup(widget.groupId, uid: uid);
   }
 
   @override
@@ -153,6 +157,11 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
   @override
   void onExpensesChanged(List<Expense> expenses) {
     setState(() => _expenses = expenses);
+  }
+
+  @override
+  void onUserBalanceLoaded(MemberBalance balance) {
+    setState(() => _userBalance = balance);
   }
 
   @override
@@ -305,11 +314,29 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     return member.isEmpty ? memberId : member.first.name;
   }
 
+  /// Cuánto pagó realmente [uid] en este gasto (0 si no pagó nada).
+  double _userPaidAmount(Expense expense, String uid) {
+    if (expense.payments.isNotEmpty) {
+      return expense.payments
+          .where((p) => p.memberId == uid)
+          .fold(0.0, (sum, p) => sum + p.shareAmount);
+    }
+    return expense.paidBy == uid ? expense.amount : 0.0;
+  }
+
+  /// Verdadero si [uid] pagó algo en este gasto (único o compartido).
+  bool _isUserPayer(Expense expense, String uid) =>
+      _userPaidAmount(expense, uid) > 0.001;
+
   /// Devuelve el color del importe de un gasto según la relación del usuario
-  /// actual con él: verde si pagó (le deben), rojo si debe parte del gasto.
+  /// actual con él: verde si pagó más de lo que le toca, rojo si debe parte.
   Color? _expenseAmountColor(Expense expense, String? uid) {
     if (uid == null) return null;
-    if (expense.paidBy == uid) return ShareColors.positive;
+    final paid = _userPaidAmount(expense, uid);
+    final ownShare = expense.splits
+        .where((s) => s.memberId == uid)
+        .fold(0.0, (sum, s) => sum + s.shareAmount);
+    if (paid > ownShare + 0.001) return ShareColors.positive;
     final inSplits =
         expense.splits.any((s) => s.memberId == uid && s.shareAmount > 0.001);
     if (inSplits) return ShareColors.negative;
@@ -472,7 +499,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (group == null) return false;
     final isOwner = group.createdBy == uid;
     final isCreator = expense.createdBy == uid;
-    final isPayer = expense.paidBy == uid;
+    final isPayer = uid != null && _isUserPayer(expense, uid);
     return isOwner || isCreator || isPayer;
   }
 
@@ -591,19 +618,8 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
   Widget _buildSummaryCard(Group group) {
     final expenses = _expenses ?? [];
     final totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
-    final uid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
 
-    double userPaid = 0;
-    double userOwed = 0;
-    if (uid != null) {
-      for (final expense in expenses) {
-        if (expense.paidBy == uid) userPaid += expense.amount;
-        for (final split in expense.splits) {
-          if (split.memberId == uid) userOwed += split.shareAmount;
-        }
-      }
-    }
-    final userNet = userPaid - userOwed;
+    final userNet = _userBalance?.netAmount ?? 0.0;
     final netColor = userNet > 0.01
         ? ShareColors.positive
         : userNet < -0.01
@@ -638,7 +654,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                 ],
               ),
             ),
-            if (uid != null)
+            if (_userBalance != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -792,11 +808,46 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     );
   }
 
+  /// Texto del subtítulo: quién pagó, con soporte para pagadores múltiples.
+  String _payerLabel(Expense expense, String? uid) {
+    final total = ShareFormat.money(expense.amount, expense.currency);
+    if (expense.payments.isNotEmpty) {
+      final isAnyPayer = uid != null &&
+          expense.payments.any((p) => p.memberId == uid && p.shareAmount > 0.001);
+      if (expense.payments.length == 1) {
+        final p = expense.payments.first;
+        final name = p.memberId == uid ? 'Tú' : _memberName(p.memberId);
+        return '$name pagó $total';
+      }
+      if (isAnyPayer) {
+        final others = expense.payments
+            .where((p) => p.memberId != uid)
+            .map((p) => _memberName(p.memberId))
+            .join(', ');
+        return 'Tú y $others pagasteis $total';
+      } else {
+        final names =
+            expense.payments.map((p) => _memberName(p.memberId)).join(' y ');
+        return '$names pagaron $total';
+      }
+    }
+    final isYouSingle = expense.paidBy == uid;
+    return isYouSingle
+        ? 'Tú pagaste $total'
+        : '${_memberName(expense.paidBy)} pagó $total';
+  }
+
   Widget _buildExpenseTile(Expense expense, String? uid) {
     final amountColor = _expenseAmountColor(expense, uid);
     final icon = ExpenseCategory.icon(expense.category);
-    final isYou = expense.paidBy == uid;
-    final amountLabel = isYou
+    final isYou = uid != null && _isUserPayer(expense, uid);
+    final userNet = uid != null
+        ? _userPaidAmount(expense, uid) -
+            expense.splits
+                .where((s) => s.memberId == uid)
+                .fold(0.0, (sum, s) => sum + s.shareAmount)
+        : 0.0;
+    final amountLabel = isYou && userNet > 0.001
         ? 'prestaste'
         : expense.splits.any((s) => s.memberId == uid && s.shareAmount > 0.001)
             ? 'pediste prestado'
@@ -855,9 +906,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    isYou
-                        ? 'Tú pagaste ${ShareFormat.money(expense.amount, expense.currency)}'
-                        : '${_memberName(expense.paidBy)} pagó ${ShareFormat.money(expense.amount, expense.currency)}',
+                    _payerLabel(expense, uid),
                     style: const TextStyle(fontSize: 11, color: Colors.black45),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -892,21 +941,19 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     );
   }
 
-  /// Devuelve el importe que le corresponde al usuario actual en el gasto.
+  /// Devuelve el importe neto del usuario en el gasto (pagado − parte propia).
   String _shareAmount(Expense expense, String? uid) {
     if (uid == null) return '';
-    if (expense.paidBy == uid) {
-      // Lo que le deben: total − su propia parte
-      final own = expense.splits
-          .where((s) => s.memberId == uid)
-          .fold(0.0, (sum, s) => sum + s.shareAmount);
-      final net = expense.amount - own;
-      return ShareFormat.money(net, expense.currency);
-    }
-    final share = expense.splits
+    final paid = _userPaidAmount(expense, uid);
+    final own = expense.splits
         .where((s) => s.memberId == uid)
         .fold(0.0, (sum, s) => sum + s.shareAmount);
-    return ShareFormat.money(share, expense.currency);
+    if (paid > 0.001) {
+      // Pagador (único o compartido): muestra lo neto a favor
+      return ShareFormat.money((paid - own).abs(), expense.currency);
+    }
+    // No pagó nada: muestra su parte a deber
+    return ShareFormat.money(own, expense.currency);
   }
 
   // ─── build ────────────────────────────────────────────────────────────────

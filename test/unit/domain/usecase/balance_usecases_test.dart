@@ -4,6 +4,7 @@ import 'package:share_app/domain/repository/balances_repository_contract.dart';
 import 'package:share_app/domain/result/result.dart';
 import 'package:share_app/domain/usecase/calculate_balances_use_case.dart';
 import 'package:share_app/domain/usecase/get_balances_use_case.dart';
+import 'package:share_app/domain/usecase/get_user_balance_use_case.dart';
 import 'package:share_app/domain/usecase/settle_up_use_case.dart';
 import 'package:share_app/domain/usecase/watch_settlements_use_case.dart';
 import 'package:share_app/models/balance.dart';
@@ -23,6 +24,15 @@ class _FakeBalancesRepo implements BalancesRepositoryContract {
   Future<List<MemberBalance>> getBalances(String groupId) async {
     if (shouldThrow) throw Exception('get failed');
     return balances;
+  }
+
+  @override
+  Future<MemberBalance> getUserBalance(String groupId, String uid) async {
+    if (shouldThrow) throw Exception('get failed');
+    return balances.firstWhere(
+      (b) => b.memberId == uid,
+      orElse: () => MemberBalance(memberId: uid, paid: 0, owed: 0),
+    );
   }
 
   @override
@@ -149,6 +159,36 @@ void main() {
       final settlement = Settlement(settlementId: '', fromMemberId: 'bob', toMemberId: 'alice', amount: 30, date: DateTime(2024), currency: 'EUR');
       final uc = SettleUpUseCase(repository: repo)
         ..params = SettleUpParams(groupId: 'g1', settlement: settlement);
+      final results = await invoker.execute(uc).toList();
+      expect(results.first, isA<Error>());
+    });
+  });
+
+  group('GetUserBalanceUseCase', () {
+    test('devuelve el balance del miembro indicado', () async {
+      final uc = GetUserBalanceUseCase(repository: repo)
+        ..params = GetUserBalanceParams(groupId: 'g1', uid: 'alice');
+      final results = await invoker.execute(uc).toList();
+      expect(results.first, isA<Success>());
+      final balance = results.first.data as MemberBalance;
+      expect(balance.memberId, 'alice');
+      expect(balance.paid, 90);
+      expect(balance.owed, 30);
+      expect(balance.netAmount, closeTo(60, 0.01));
+    });
+
+    test('miembro sin gastos devuelve balance en cero', () async {
+      final uc = GetUserBalanceUseCase(repository: repo)
+        ..params = GetUserBalanceParams(groupId: 'g1', uid: 'charlie');
+      final results = await invoker.execute(uc).toList();
+      final balance = results.first.data as MemberBalance;
+      expect(balance.netAmount, closeTo(0, 0.01));
+    });
+
+    test('fallo devuelve Error', () async {
+      repo.shouldThrow = true;
+      final uc = GetUserBalanceUseCase(repository: repo)
+        ..params = GetUserBalanceParams(groupId: 'g1', uid: 'alice');
       final results = await invoker.execute(uc).toList();
       expect(results.first, isA<Error>());
     });

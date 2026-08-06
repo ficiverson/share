@@ -10,6 +10,10 @@ abstract class BalancesRepositoryContract {
   /// Settlements (ver `calculate_balances_use_case.dart`).
   Future<List<MemberBalance>> getBalances(String groupId);
 
+  /// Balance neto de un único miembro [uid] en el grupo [groupId].
+  /// Más eficiente que `getBalances` cuando solo se necesita el balance propio.
+  Future<MemberBalance> getUserBalance(String groupId, String uid);
+
   Stream<List<Settlement>> watchSettlements(String groupId);
 
   /// Registra una liquidación entre dos miembros (documento en `settlements`).
