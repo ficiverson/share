@@ -156,6 +156,57 @@ void main() {
     });
   });
 
+  // ── getUserBalance ────────────────────────────────────────────────────────────
+  group('BalancesRepository.getUserBalance', () {
+    test('single-payer: net correcto para el pagador', () async {
+      ds.seedExpense('g1', _expense(paidBy: 'alice', amount: 60));
+      final balance = await repo.getUserBalance('g1', 'alice');
+      expect(balance.memberId, 'alice');
+      expect(balance.paid, closeTo(60, 0.01));
+      expect(balance.owed, closeTo(30, 0.01));
+      expect(balance.netAmount, closeTo(30, 0.01));
+    });
+
+    test('single-payer: net correcto para el deudor', () async {
+      ds.seedExpense('g1', _expense(paidBy: 'alice', amount: 60));
+      final balance = await repo.getUserBalance('g1', 'bob');
+      expect(balance.paid, closeTo(0, 0.01));
+      expect(balance.owed, closeTo(30, 0.01));
+      expect(balance.netAmount, closeTo(-30, 0.01));
+    });
+
+    test('multi-payer: usa payments en lugar de paidBy', () async {
+      ds.seedExpense('g1', _expense(
+        paidBy: 'alice',
+        amount: 15.23,
+        payments: [
+          Split(memberId: 'alice', shareAmount: 10.0, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 5.23, shareType: ShareType.exact),
+        ],
+      ));
+      final alice = await repo.getUserBalance('g1', 'alice');
+      final bob = await repo.getUserBalance('g1', 'bob');
+      expect(alice.netAmount, closeTo(10.0 - 15.23 / 2, 0.01)); // +2.385
+      expect(bob.netAmount, closeTo(5.23 - 15.23 / 2, 0.01));   // -2.385
+    });
+
+    test('liquidación ajusta el balance del usuario', () async {
+      ds.seedExpense('g1', _expense(paidBy: 'alice', amount: 60));
+      ds.seedSettlement('g1', Settlement(
+        settlementId: 's1', fromMemberId: 'bob', toMemberId: 'alice',
+        amount: 30, date: DateTime(2024), currency: 'EUR',
+      ));
+      final bob = await repo.getUserBalance('g1', 'bob');
+      expect(bob.netAmount, closeTo(0, 0.01));
+    });
+
+    test('sin gastos: balance en cero', () async {
+      final balance = await repo.getUserBalance('g1', 'alice');
+      expect(balance.paid, 0);
+      expect(balance.owed, 0);
+    });
+  });
+
   // ── Pago compartido (payments) ────────────────────────────────────────────────
   group('BalancesRepository.getBalances — pago compartido', () {
     test('con payments: ignora paidBy y usa los pagos individuales', () async {
@@ -238,6 +289,57 @@ void main() {
       final balances = await repo.getBalances('g1');
       final alice = balances.firstWhere((b) => b.memberId == 'alice');
       expect(alice.paid, closeTo(60, 0.01));
+    });
+
+    // ── Escenario exacto del bug reportado ───────────────────────────────────
+    // Fer pagó 10 €, Gemma pagó 5,23 €. Total: 15,23 €. Reparto igualitario.
+    // BUG: si payments se pierde al guardar, el sistema usa paidBy=fer con
+    //      amount=15,23 → net fer = +7,615 (INCORRECTO).
+    // CORRECTO: net fer = 10 - 7,615 = +2,385; net gemma = 5,23 - 7,615 = -2,385.
+    test('bug: pago desigual con importe decimal — net correcto, no la mitad del total', () async {
+      const total = 15.23;
+      const ferPago = 10.0;
+      const gemmaPago = 5.23;
+      const share = total / 2; // 7.615
+
+      ds.seedExpense('g1', _expense(
+        paidBy: 'alice', // alice = "fer" en el bug original
+        amount: total,
+        payments: [
+          Split(memberId: 'alice', shareAmount: ferPago, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: gemmaPago, shareType: ShareType.exact),
+        ],
+      ));
+      final balances = await repo.getBalances('g1');
+      final fer = balances.firstWhere((b) => b.memberId == 'alice');
+      final gemma = balances.firstWhere((b) => b.memberId == 'bob');
+
+      // Si payments se pierde, fer.netAmount sería +7,615 (INCORRECTO)
+      expect(fer.netAmount, isNot(closeTo(share, 0.01)),
+          reason: 'payments perdidos daría net = mitad del total (bug)');
+
+      // Valor correcto
+      expect(fer.netAmount, closeTo(ferPago - share, 0.01));   // +2.385
+      expect(gemma.netAmount, closeTo(gemmaPago - share, 0.01)); // -2.385
+    });
+
+    test('pago desigual + reparto desigual: netos independientes', () async {
+      // alice paga 10, bob paga 5.23. Reparto: alice debe 3, bob debe 12.23.
+      // net alice: 10 - 3 = +7     net bob: 5.23 - 12.23 = -7
+      ds.seedExpense('g1', _expense(
+        paidBy: 'alice',
+        amount: 15.23,
+        shares: {'alice': 3.0, 'bob': 12.23},
+        payments: [
+          Split(memberId: 'alice', shareAmount: 10.0, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 5.23, shareType: ShareType.exact),
+        ],
+      ));
+      final balances = await repo.getBalances('g1');
+      final alice = balances.firstWhere((b) => b.memberId == 'alice');
+      final bob = balances.firstWhere((b) => b.memberId == 'bob');
+      expect(alice.netAmount, closeTo(7.0, 0.01));
+      expect(bob.netAmount, closeTo(-7.0, 0.01));
     });
 
     test('tres pagadores: cada uno acumula su parte', () async {

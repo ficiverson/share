@@ -39,8 +39,11 @@ class _FakeDS implements FirestoreRemoteDataSourceContract {
       expenseId: 'eid_${(_expenses[groupId]?.length ?? 0) + 1}',
       description: expense.description, amount: expense.amount,
       currency: expense.currency, category: expense.category,
-      paidBy: expense.paidBy, date: expense.date, createdAt: expense.createdAt,
+      paidBy: expense.paidBy, createdBy: expense.createdBy,
+      date: expense.date, createdAt: expense.createdAt,
+      notes: expense.notes,
       splits: expense.splits,
+      payments: expense.payments,
     );
     _expenses.putIfAbsent(groupId, () => []).add(saved);
     return saved;
@@ -201,6 +204,61 @@ void main() {
       await repo.importCsv('g1', csv);
       final expenses = ds._expenses['g1'] ?? [];
       expect(expenses.first.paidBy, 'alice');
+    });
+  });
+
+  // ── Regresión: addExpense debe conservar payments ─────────────────────────
+  group('ExpensesRepository — payments preservation (bug regression)', () {
+    test('addExpense preserva el campo payments en el gasto guardado', () async {
+      // Reproduce el bug: Firestore datasource construía un Expense nuevo sin
+      // copiar payments → al leer el gasto, payments estaba vacío → getBalances
+      // usaba paidBy + amount completo en lugar de los pagos individuales.
+      final withPayments = Expense(
+        expenseId: '',
+        description: 'Cena',
+        amount: 15.23,
+        currency: 'EUR',
+        category: 'Comida',
+        paidBy: 'alice',
+        date: DateTime(2024),
+        createdAt: DateTime(2024),
+        splits: [
+          Split(memberId: 'alice', shareAmount: 7.615, shareType: ShareType.equal),
+          Split(memberId: 'bob', shareAmount: 7.615, shareType: ShareType.equal),
+        ],
+        payments: [
+          Split(memberId: 'alice', shareAmount: 10.0, shareType: ShareType.exact),
+          Split(memberId: 'bob', shareAmount: 5.23, shareType: ShareType.exact),
+        ],
+      );
+
+      final saved = await ds.addExpense('g1', withPayments);
+
+      expect(saved.payments.length, 2,
+          reason: 'payments debe sobrevivir al addExpense');
+      expect(saved.payments.firstWhere((p) => p.memberId == 'alice').shareAmount,
+          closeTo(10.0, 0.01));
+      expect(saved.payments.firstWhere((p) => p.memberId == 'bob').shareAmount,
+          closeTo(5.23, 0.01));
+    });
+
+    test('sin payments: addExpense mantiene lista vacía (single-payer)', () async {
+      final noPay = Expense(
+        expenseId: '',
+        description: 'Taxi',
+        amount: 20,
+        currency: 'EUR',
+        category: '',
+        paidBy: 'alice',
+        date: DateTime(2024),
+        createdAt: DateTime(2024),
+        splits: [
+          Split(memberId: 'alice', shareAmount: 10, shareType: ShareType.equal),
+          Split(memberId: 'bob', shareAmount: 10, shareType: ShareType.equal),
+        ],
+      );
+      final saved = await ds.addExpense('g1', noPay);
+      expect(saved.payments, isEmpty);
     });
   });
 }

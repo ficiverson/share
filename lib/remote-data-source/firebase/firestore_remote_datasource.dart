@@ -196,10 +196,12 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
       currency: expense.currency,
       category: expense.category,
       paidBy: expense.paidBy,
+      createdBy: expense.createdBy,
       date: expense.date,
       createdAt: expense.createdAt,
       notes: expense.notes,
       splits: expense.splits,
+      payments: expense.payments,
     );
     await docRef.set(newExpense.toMap());
     return newExpense;
@@ -252,10 +254,12 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
             currency: expense.currency,
             category: expense.category,
             paidBy: expense.paidBy,
+            createdBy: expense.createdBy,
             date: expense.date,
             createdAt: expense.createdAt,
             notes: expense.notes,
             splits: expense.splits,
+            payments: expense.payments,
           ).toMap(),
         );
       }

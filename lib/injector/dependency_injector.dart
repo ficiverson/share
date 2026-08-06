@@ -19,6 +19,7 @@ import 'package:share_app/domain/usecase/delete_group_use_case.dart';
 import 'package:share_app/domain/usecase/edit_group_use_case.dart';
 import 'package:share_app/domain/usecase/edit_expense_use_case.dart';
 import 'package:share_app/domain/usecase/get_balances_use_case.dart';
+import 'package:share_app/domain/usecase/get_user_balance_use_case.dart';
 import 'package:share_app/domain/usecase/get_current_user_use_case.dart';
 import 'package:share_app/domain/usecase/import_csv_use_case.dart';
 import 'package:share_app/domain/usecase/join_group_use_case.dart';
@@ -138,6 +139,9 @@ class DependencyInjector {
 
   // --- Casos de uso de balances/liquidaciones (Fase 4) ---
   GetBalancesUseCase get getBalancesUseCase => GetBalancesUseCase(repository: balancesRepository);
+
+  GetUserBalanceUseCase get getUserBalanceUseCase =>
+      GetUserBalanceUseCase(repository: balancesRepository);
 
   CalculateBalancesUseCase get calculateBalancesUseCase =>
       CalculateBalancesUseCase(repository: balancesRepository);
