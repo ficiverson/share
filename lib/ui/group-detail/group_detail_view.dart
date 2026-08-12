@@ -499,7 +499,7 @@ class _GroupDetailViewState extends State<GroupDetailView> implements GroupDetai
     if (group == null) return false;
     final isOwner = group.createdBy == uid;
     final isCreator = expense.createdBy == uid;
-    final isPayer = uid != null && _isUserPayer(expense, uid);
+    final isPayer = _isUserPayer(expense, uid);
     return isOwner || isCreator || isPayer;
   }
 
