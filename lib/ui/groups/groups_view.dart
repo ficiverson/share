@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:share_app/injector/dependency_injector.dart';
+import 'package:share_app/models/balance.dart';
 import 'package:share_app/models/group.dart';
 import 'package:share_app/models/user.dart';
+import 'package:share_app/utils/share_format.dart';
 import 'package:share_app/services/local_notification_service.dart';
 import 'package:share_app/ui/group-detail/group_detail_router.dart';
 import 'package:share_app/ui/groups/groups_presenter.dart';
@@ -23,6 +25,7 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
   late final GroupsPresenter _presenter;
   AppUser? _user;
   List<Group>? _groups;
+  final Map<String, MemberBalance?> _groupBalances = {};
   String? _error;
   bool _actionLoading = false;
   bool _signingOut = false;
@@ -73,12 +76,24 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
     super.dispose();
   }
 
+  void _loadBalances(List<Group> groups) {
+    final uid = _user?.id;
+    if (uid == null) return;
+    final repo = DependencyInjector.instance.balancesRepository;
+    for (final group in groups) {
+      repo.getUserBalance(group.groupId, uid).then((balance) {
+        if (mounted) setState(() => _groupBalances[group.groupId] = balance);
+      }).catchError((_) {});
+    }
+  }
+
   @override
   void onGroupsChanged(List<Group> groups) {
     setState(() {
       _groups = groups;
       _error = null;
     });
+    _loadBalances(groups);
   }
 
   @override
@@ -297,6 +312,15 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
                         itemCount: groups.length,
                         itemBuilder: (context, index) {
                           final group = groups[index];
+                          final balance = _groupBalances[group.groupId];
+                          final net = balance?.netAmount;
+                          final netColor = net == null
+                              ? null
+                              : net > 0.01
+                                  ? ShareColors.positive
+                                  : net < -0.01
+                                      ? ShareColors.negative
+                                      : Colors.black54;
                           return Card(
                             child: ListTile(
                               leading: const Icon(Icons.pie_chart, color: ShareColors.primary),
@@ -304,7 +328,32 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
                               subtitle: Text(
                                 '${group.members.length} miembro${group.members.length == 1 ? '' : 's'} · ${group.currency}',
                               ),
-                              trailing: const Icon(Icons.chevron_right),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (net != null)
+                                    Text(
+                                      net > 0.01
+                                          ? '+${ShareFormat.money(net, group.currency)}'
+                                          : net < -0.01
+                                              ? '-${ShareFormat.money(-net, group.currency)}'
+                                              : ShareFormat.money(0, group.currency),
+                                      style: TextStyle(
+                                        color: netColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    )
+                                  else
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right),
+                                ],
+                              ),
                               onTap: () => GroupDetailRouter.open(context, group.groupId),
                             ),
                           );

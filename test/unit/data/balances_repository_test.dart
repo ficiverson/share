@@ -205,6 +205,47 @@ void main() {
       expect(balance.paid, 0);
       expect(balance.owed, 0);
     });
+
+    test('múltiples gastos: paid y owed se acumulan correctamente', () async {
+      // Gasto 1: alice paga 60, split 30/30
+      ds.seedExpense('g1', _expense(paidBy: 'alice', amount: 60));
+      // Gasto 2: bob paga 40, split 20/20
+      ds.seedExpense('g1', _expense(paidBy: 'bob', amount: 40));
+      final alice = await repo.getUserBalance('g1', 'alice');
+      // alice: paid=60, owed=30+20=50, net=+10
+      expect(alice.paid, closeTo(60, 0.01));
+      expect(alice.owed, closeTo(50, 0.01));
+      expect(alice.netAmount, closeTo(10, 0.01));
+    });
+
+    test('liquidación como receptor: owed sube para cancelar crédito', () async {
+      // alice pagó 60, bob le debe 30. Bob liquida → alice recibe el pago.
+      // Tras la liquidación alice.net debe ser 0.
+      ds.seedExpense('g1', _expense(paidBy: 'alice', amount: 60));
+      ds.seedSettlement('g1', Settlement(
+        settlementId: 's1', fromMemberId: 'bob', toMemberId: 'alice',
+        amount: 30, date: DateTime(2024), currency: 'EUR',
+      ));
+      final alice = await repo.getUserBalance('g1', 'alice');
+      // paid=60, owed=30(split)+30(settlement recibido)=60, net=0
+      expect(alice.netAmount, closeTo(0, 0.01));
+    });
+
+    test('uid no participa en ningún split ni payment: balance en cero', () async {
+      // Gasto solo entre alice y bob; alice no está en grupo g1 aquí
+      // pero el método devuelve 0 si no hay actividad relacionada
+      ds.seedExpense('g1', Expense(
+        expenseId: 'e1', description: 'Algo', amount: 40,
+        currency: 'EUR', category: '', paidBy: 'bob',
+        date: DateTime(2024), createdAt: DateTime(2024),
+        splits: [Split(memberId: 'bob', shareAmount: 40, shareType: ShareType.equal)],
+        payments: [],
+      ));
+      final alice = await repo.getUserBalance('g1', 'alice');
+      expect(alice.paid, 0);
+      expect(alice.owed, 0);
+      expect(alice.netAmount, 0);
+    });
   });
 
   // ── Pago compartido (payments) ────────────────────────────────────────────────
