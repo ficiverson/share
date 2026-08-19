@@ -55,27 +55,49 @@ class ExpenseFormPresenter {
     });
   }
 
-  /// Escribe un doc de notificación en `notifications/{uid}/pending/` para
-  /// cada miembro del grupo que no sea quien creó el gasto.
+  /// Escribe un doc de notificación personalizado en
+  /// `notifications/{uid}/pending/` para cada miembro del grupo que no sea
+  /// quien creó el gasto. El cuerpo incluye quién pagó y cuánto le toca
+  /// pagar al destinatario según sus splits.
   Future<void> _sendNotifications(Group group, Expense expense) async {
-    final payerName = group.members
-            .where((m) => m.memberId == expense.paidBy)
-            .map((m) => m.name)
-            .firstOrNull ??
-        expense.paidBy;
-
-    final payload = {
-      'title': 'Nuevo gasto en ${group.name}',
-      'body': '$payerName pagó ${expense.description} · ${ShareFormat.money(expense.amount, expense.currency)}',
-      'groupId': group.groupId,
-      'expenseId': expense.expenseId,
-    };
+    // Nombre(s) del pagador: lista de todos si hay pagos múltiples.
+    final String payerNames;
+    if (expense.payments.isNotEmpty) {
+      payerNames = expense.payments
+          .map((p) =>
+              group.members
+                  .where((m) => m.memberId == p.memberId)
+                  .map((m) => m.name)
+                  .firstOrNull ??
+              p.memberId)
+          .join(' y ');
+    } else {
+      payerNames = group.members
+              .where((m) => m.memberId == expense.paidBy)
+              .map((m) => m.name)
+              .firstOrNull ??
+          expense.paidBy;
+    }
 
     for (final member in group.members) {
       if (member.memberId == expense.createdBy) continue;
+
+      // Parte que le toca pagar a este miembro.
+      final share = expense.splits
+          .where((s) => s.memberId == member.memberId)
+          .fold(0.0, (sum, s) => sum + s.shareAmount);
+
+      final body = share > 0.001
+          ? '$payerNames pagó ${expense.description} · te toca ${ShareFormat.money(share, expense.currency)}'
+          : '$payerNames pagó ${expense.description} · ${ShareFormat.money(expense.amount, expense.currency)}';
+
       try {
-        await firestoreDataSource.sendNotificationToUser(
-            member.memberId, payload);
+        await firestoreDataSource.sendNotificationToUser(member.memberId, {
+          'title': 'Nuevo gasto en ${group.name}',
+          'body': body,
+          'groupId': group.groupId,
+          'expenseId': expense.expenseId,
+        });
       } catch (_) {
         // Silencioso: fallo en notificación no bloquea la UI.
       }
