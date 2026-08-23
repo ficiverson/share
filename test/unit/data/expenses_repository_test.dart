@@ -83,8 +83,9 @@ class _FakeDS implements FirestoreRemoteDataSourceContract {
     return settlement;
   }
 
-  @override
-  Future<void> sendNotificationToUser(String recipientUid, Map<String, dynamic> payload) async {}
+  @override Future<void> saveFcmToken(String uid, String token) async {}
+  @override Future<String?> getFcmToken(String uid) async => null;
+  @override Future<void> sendNotificationToUser(String recipientUid, Map<String, dynamic> payload) async {}
   @override
   Stream<List<Map<String, dynamic>>> watchPendingNotifications(String uid) => Stream.value([]);
   @override

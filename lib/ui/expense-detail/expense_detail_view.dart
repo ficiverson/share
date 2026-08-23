@@ -149,7 +149,7 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
                     children: [
                       CircleAvatar(
                         radius: 26,
-                        backgroundColor: ShareColors.primary.withOpacity(0.15),
+                        backgroundColor: ShareColors.primary.withValues(alpha: 0.15),
                         child: Icon(icon, color: ShareColors.primary, size: 26),
                       ),
                       const SizedBox(width: 16),
@@ -165,7 +165,7 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
                               Text(
                                 expense.category,
                                 style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurface.withOpacity(0.6),
+                                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                           ],
@@ -234,7 +234,7 @@ class _ExpenseDetailViewState extends State<ExpenseDetailView> {
               child: Text(
                 'Reparto entre miembros',
                 style: textTheme.titleSmall?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.6),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -282,14 +282,14 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
           const SizedBox(width: 20),
           SizedBox(
             width: 72,
             child: Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
                 fontSize: 13,
               ),
             ),
@@ -327,8 +327,8 @@ class _SplitRow extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: isPayer
-                ? ShareColors.primary.withOpacity(0.15)
-                : Theme.of(context).colorScheme.surfaceVariant,
+                ? ShareColors.primary.withValues(alpha: 0.15)
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
               style: TextStyle(

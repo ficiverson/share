@@ -28,6 +28,9 @@ class _FakeDS implements FirestoreRemoteDataSourceContract {
   /// Notificaciones enviadas: recipient → lista de payloads.
   final Map<String, List<Map<String, dynamic>>> sent = {};
 
+  @override Future<void> saveFcmToken(String uid, String token) async {}
+  @override Future<String?> getFcmToken(String uid) async => null;
+
   @override
   Future<void> sendNotificationToUser(
       String recipientUid, Map<String, dynamic> payload) async {
@@ -233,9 +236,9 @@ void main() {
     });
 
     test('body muestra la parte correcta del destinatario con multi-payer', () async {
-      // alice paga 10, bob paga 5.23; total 15.23, split igualitario ~5.077 cada uno
+      // alice crea el gasto; alice y bob pagan; charlie recibe notificación.
       final expense = _expense(
-        createdBy: 'charlie',
+        createdBy: 'alice',
         paidBy: 'alice',
         amount: 15.23,
         splits: [
@@ -251,7 +254,7 @@ void main() {
       presenter.save('g1', expense, _group());
       await Future.delayed(Duration.zero);
 
-      // charlie recibe notificación con su parte (~5.076)
+      // charlie (no es creador) recibe notificación con su parte (~5.076)
       final charlieBody = ds.sent['charlie']!.first['body'] as String;
       expect(charlieBody, contains('te toca'));
       expect(charlieBody, contains('5'));

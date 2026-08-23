@@ -108,8 +108,8 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
     _categoryController.dispose();
     _notesController.dispose();
     _currencyController.dispose();
-    for (final c in _splitControllers.values) c.dispose();
-    for (final c in _paymentControllers.values) c.dispose();
+    for (final c in _splitControllers.values) { c.dispose(); }
+    for (final c in _paymentControllers.values) { c.dispose(); }
     super.dispose();
   }
 
@@ -316,7 +316,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                 'Categoría',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -334,7 +334,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                   ),
                   label: Text(entry.key),
                   selected: selected,
-                  selectedColor: ShareColors.primary.withOpacity(0.15),
+                  selectedColor: ShareColors.primary.withValues(alpha: 0.15),
                   checkmarkColor: ShareColors.primary,
                   onSelected: (_) => setState(() {
                     _categoryController.text = selected ? '' : entry.key;
@@ -375,7 +375,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                           : 'Un solo miembro pagó todo',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     value: _sharedPayment,
@@ -412,7 +412,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -518,7 +518,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
                       : 'Reparto a partes iguales',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 value: _customSplit,

@@ -157,7 +157,7 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  '${entry.value.toStringAsFixed(0)}',
+                  entry.value.toStringAsFixed(0),
                   style: const TextStyle(fontSize: 10, color: Colors.black54),
                 ),
                 const SizedBox(height: 2),
@@ -166,9 +166,9 @@ class _StatsViewState extends State<StatsView> with SingleTickerProviderStateMix
                   curve: Curves.easeOut,
                   width: 36,
                   height: 160 * pct.clamp(0.02, 1.0),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: ShareColors.primary,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
                   ),
                 ),
                 const SizedBox(height: 4),

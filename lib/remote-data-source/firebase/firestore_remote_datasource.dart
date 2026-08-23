@@ -294,6 +294,20 @@ class FirestoreRemoteDataSource implements FirestoreRemoteDataSourceContract {
 
   // --- notifications ---
 
+  @override
+  Future<void> saveFcmToken(String uid, String token) async {
+    await _firestore.collection('users').doc(uid).set(
+      {'fcmToken': token},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Future<String?> getFcmToken(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.data()?['fcmToken'] as String?;
+  }
+
   CollectionReference<Map<String, dynamic>> _pending(String uid) =>
       _firestore.collection('notifications').doc(uid).collection('pending');
 
