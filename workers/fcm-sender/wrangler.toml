@@ -1,0 +1,7 @@
+name            = "share-fcm-sender"
+main            = "index.js"
+compatibility_date = "2024-09-23"
+
+# Secrets — configurar con:
+#   wrangler secret put FIREBASE_SERVICE_ACCOUNT
+#   wrangler secret put SHARED_SECRET

@@ -5,6 +5,7 @@ import 'package:share_app/domain/usecase/add_expense_use_case.dart';
 import 'package:share_app/domain/usecase/edit_expense_use_case.dart';
 import 'package:share_app/models/expense.dart';
 import 'package:share_app/models/group.dart';
+import 'package:share_app/services/fcm_sender_service.dart';
 import 'package:share_app/utils/share_format.dart';
 
 /// Vista abstracta que implementa el widget `ExpenseFormView`.
@@ -91,14 +92,29 @@ class ExpenseFormPresenter {
           ? '$payerNames pagó ${expense.description} · te toca ${ShareFormat.money(share, expense.currency)}'
           : '$payerNames pagó ${expense.description} · ${ShareFormat.money(expense.amount, expense.currency)}';
 
-      // Escribe el doc en Firestore → la Cloud Function lo detecta y envía
-      // la push vía FCM HTTP v1 (Admin SDK). En web actúa el listener local.
+      final notifTitle = 'Nuevo gasto en ${group.name}';
+      final notifData = {
+        'groupId': group.groupId,
+        'expenseId': expense.expenseId,
+      };
+
+      // 1. Cloudflare Worker → FCM HTTP v1 → push en background/cerrada (móvil).
+      final fcmToken = await firestoreDataSource.getFcmToken(member.memberId);
+      if (fcmToken != null) {
+        await FcmSenderService.instance.sendToToken(
+          token: fcmToken,
+          title: notifTitle,
+          body: body,
+          data: notifData,
+        );
+      }
+
+      // 2. Firestore pending → listener local cuando la app está abierta o en web.
       try {
         await firestoreDataSource.sendNotificationToUser(member.memberId, {
-          'title': 'Nuevo gasto en ${group.name}',
+          'title': notifTitle,
           'body': body,
-          'groupId': group.groupId,
-          'expenseId': expense.expenseId,
+          ...notifData,
         });
       } catch (_) {
         // Silencioso: fallo en notificación no bloquea la UI.
