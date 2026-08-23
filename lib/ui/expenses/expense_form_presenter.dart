@@ -91,6 +91,8 @@ class ExpenseFormPresenter {
           ? '$payerNames pagó ${expense.description} · te toca ${ShareFormat.money(share, expense.currency)}'
           : '$payerNames pagó ${expense.description} · ${ShareFormat.money(expense.amount, expense.currency)}';
 
+      // Escribe el doc en Firestore → la Cloud Function lo detecta y envía
+      // la push vía FCM HTTP v1 (Admin SDK). En web actúa el listener local.
       try {
         await firestoreDataSource.sendNotificationToUser(member.memberId, {
           'title': 'Nuevo gasto en ${group.name}',

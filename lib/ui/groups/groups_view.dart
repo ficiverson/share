@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_app/injector/dependency_injector.dart';
 import 'package:share_app/models/balance.dart';
@@ -7,6 +8,7 @@ import 'package:share_app/models/group.dart';
 import 'package:share_app/models/user.dart';
 import 'package:share_app/utils/share_format.dart';
 import 'package:share_app/services/local_notification_service.dart';
+import 'package:share_app/services/push_notification_service.dart';
 import 'package:share_app/ui/group-detail/group_detail_router.dart';
 import 'package:share_app/ui/groups/groups_presenter.dart';
 import 'package:share_app/ui/login/login_router.dart';
@@ -49,6 +51,11 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
     if (user != null) {
       _presenter.watchGroups(user);
       _startNotificationListener(user.id);
+      // Push FCM solo en móvil; web usa el listener de Firestore.
+      PushNotificationService.instance.init(
+        uid: user.id,
+        dataSource: DependencyInjector.instance.firestoreDataSource,
+      );
     }
   }
 
@@ -59,9 +66,14 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
     _notificationSub = ds.watchPendingNotifications(uid).listen((docs) async {
       for (final doc in docs) {
         final id = doc['id'] as String?;
-        final title = doc['title'] as String? ?? 'Share';
-        final body = doc['body'] as String? ?? '';
-        await LocalNotificationService.instance.show(title: title, body: body);
+        // En web no hay FCM, mostramos la notificación local desde aquí.
+        // En móvil FCM ya la muestra (y borra el doc); este listener solo
+        // actúa como fallback para docs que FCM no pudo borrar a tiempo.
+        if (kIsWeb) {
+          final title = doc['title'] as String? ?? 'Share';
+          final body = doc['body'] as String? ?? '';
+          await LocalNotificationService.instance.show(title: title, body: body);
+        }
         if (id != null) {
           try { await ds.deleteNotification(uid, id); } catch (_) {}
         }
@@ -290,12 +302,12 @@ class _GroupsViewState extends State<GroupsView> implements GroupsViewContract {
             child: groups == null
                 ? const Center(child: CircularProgressIndicator())
                 : groups.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(24),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(Icons.group, size: 64, color: ShareColors.primary),
                               SizedBox(height: 16),
                               Text(

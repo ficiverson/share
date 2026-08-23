@@ -13,16 +13,16 @@ void main() {
     });
 
     test('error es rojo', () {
-      expect(ShareColors.error.red, greaterThan(200));
-      expect(ShareColors.error.green, lessThan(100));
+      expect((ShareColors.error.r * 255.0).round(), greaterThan(200));
+      expect((ShareColors.error.g * 255.0).round(), lessThan(100));
     });
 
     test('positive es verde oscuro', () {
-      expect(ShareColors.positive.green, greaterThan(ShareColors.positive.red));
+      expect(ShareColors.positive.g, greaterThan(ShareColors.positive.r));
     });
 
     test('negative es rojo oscuro', () {
-      expect(ShareColors.negative.red, greaterThan(ShareColors.negative.green));
+      expect(ShareColors.negative.r, greaterThan(ShareColors.negative.g));
     });
 
     test('theme() devuelve ThemeData con useMaterial3 = true', () {

@@ -48,6 +48,13 @@ abstract class FirestoreRemoteDataSourceContract {
   Future<Settlement> addSettlement(String groupId, Settlement settlement);
 
   // --- notifications ---
+  /// Guarda el token FCM del dispositivo en `users/{uid}/fcmToken`.
+  Future<void> saveFcmToken(String uid, String token);
+
+  /// Lee el token FCM de un usuario desde `users/{uid}/fcmToken`.
+  /// Devuelve null si el usuario no tiene token registrado.
+  Future<String?> getFcmToken(String uid);
+
   /// Escribe un doc de notificación en `notifications/{recipientUid}/pending/`.
   Future<void> sendNotificationToUser(
       String recipientUid, Map<String, dynamic> payload);

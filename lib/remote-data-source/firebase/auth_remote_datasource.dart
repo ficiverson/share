@@ -77,7 +77,7 @@ class AuthRemoteDataSource implements AuthRemoteDataSourceContract {
 
   /// Genera un nonce aleatorio de 32 bytes en Base64 URL-safe.
   String _generateNonce([int length = 32]) {
-    final charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
     return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
   }

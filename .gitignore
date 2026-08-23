@@ -104,6 +104,10 @@ unlinked_spec.ds
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
 
+# Node / Cloud Functions
+node_modules/
+functions/node_modules/
+
 # Coverage
 coverage/
 
