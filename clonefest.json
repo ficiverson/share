@@ -22,7 +22,7 @@
   "license": "MIT",
   "version": "0.1.0+1",
   "published_at": "2026-06-12",
-  "updated_at": "2026-08-23",
+  "updated_at": "2026-08-24",
   "icon": "icon.png",
   "screenshots": ["screenshots/app-1.png","screenshots/app-2.png","screenshots/app-3.png"],
   "platforms": ["web", "android", "ios"],
@@ -73,6 +73,11 @@
         "title": { "en": "Link the app to YOUR Firebase project (generates firebase_options.dart)", "es": "Conecta la app a TU proyecto Firebase (genera firebase_options.dart)" }
       },
       {
+        "id": "sw-config", "type": "manual",
+        "doc": "web/firebase-messaging-sw.js",
+        "title": { "en": "Open web/firebase-messaging-sw.js and replace the 6 placeholder values (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId) with YOUR Firebase web config — same values as in the generated lib/firebase_options.dart under FirebaseOptions.web", "es": "Abre web/firebase-messaging-sw.js y reemplaza los 6 valores placeholder (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId) con TU config web de Firebase — los mismos valores que están en lib/firebase_options.dart bajo FirebaseOptions.web" }
+      },
+      {
         "id": "deps", "type": "shell",
         "run": "flutter pub get",
         "title": { "en": "Install Flutter dependencies", "es": "Instala dependencias Flutter" }
@@ -100,7 +105,12 @@
       {
         "id": "worker-configure", "type": "manual",
         "doc": "lib/services/fcm_sender_service.dart",
-        "title": { "en": "Note the Worker URL and the SHARED_SECRET you set earlier — you will pass them at build time via --dart-define (never hardcode them in source). Example: flutter build web --release --dart-define=FCM_WORKER_URL=https://share-fcm-sender.<user>.workers.dev --dart-define=FCM_SHARED_SECRET=<your-secret>", "es": "Anota la URL del Worker y el SHARED_SECRET que configuraste antes — los pasarás en el build via --dart-define (nunca los pongas en el código fuente). Ejemplo: flutter build web --release --dart-define=FCM_WORKER_URL=https://share-fcm-sender.<user>.workers.dev --dart-define=FCM_SHARED_SECRET=<tu-secreto>" }
+        "title": { "en": "Note the Worker URL and the SHARED_SECRET you set earlier — you will pass them at build time via --dart-define (never hardcode them in source)", "es": "Anota la URL del Worker y el SHARED_SECRET que configuraste antes — los pasarás en el build via --dart-define (nunca los pongas en el código fuente)" }
+      },
+      {
+        "id": "vapid-key", "type": "manual",
+        "url": "https://console.firebase.google.com/project/_/settings/cloudmessaging",
+        "title": { "en": "Get the VAPID key for web push: Firebase Console → Project settings → Cloud Messaging → Web Push certificates → Generate key pair (or use existing). Copy the public key — you will pass it as --dart-define=FCM_VAPID_KEY=<key>", "es": "Obtén la VAPID key para push web: Consola Firebase → Configuración del proyecto → Cloud Messaging → Certificados de push web → Generar par de claves (o usa el existente). Copia la clave pública — la pasarás como --dart-define=FCM_VAPID_KEY=<clave>" }
       },
       {
         "id": "rules", "type": "manual",
@@ -109,13 +119,13 @@
       },
       {
         "id": "test-local", "type": "shell",
-        "run": "flutter run -d chrome --dart-define=FCM_WORKER_URL=<worker-url> --dart-define=FCM_SHARED_SECRET=<secret>",
+        "run": "flutter run -d chrome --dart-define=FCM_WORKER_URL=<worker-url> --dart-define=FCM_SHARED_SECRET=<secret> --dart-define=FCM_VAPID_KEY=<vapid-key>",
         "optional": true,
         "title": { "en": "Run locally to verify (replace placeholders with real values)", "es": "Ejecuta en local para verificar (reemplaza los placeholders con los valores reales)" }
       },
       {
         "id": "build", "type": "shell",
-        "run": "flutter build web --release --dart-define=FCM_WORKER_URL=<worker-url> --dart-define=FCM_SHARED_SECRET=<secret>",
+        "run": "flutter build web --release --dart-define=FCM_WORKER_URL=<worker-url> --dart-define=FCM_SHARED_SECRET=<secret> --dart-define=FCM_VAPID_KEY=<vapid-key>",
         "title": { "en": "Build the web app (replace placeholders with real values)", "es": "Compila la app web (reemplaza los placeholders con los valores reales)" }
       },
       {

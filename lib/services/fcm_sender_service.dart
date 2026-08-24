@@ -41,7 +41,6 @@ class FcmSenderService {
     required String body,
     Map<String, String> data = const {},
   }) async {
-    if (kIsWeb) return;
     if (_workerUrl.isEmpty) return;
     try {
       await http.post(
