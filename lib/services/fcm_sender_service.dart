@@ -21,20 +21,37 @@ import 'package:http/http.dart' as http;
 ///
 /// Nunca pongas los valores reales en el código fuente.
 class FcmSenderService {
-  FcmSenderService._();
+  FcmSenderService._({
+    http.Client? client,
+    String? workerUrl,
+    String? sharedSecret,
+  })  : _client = client ?? http.Client(),
+        _workerUrl =
+            workerUrl ?? const String.fromEnvironment('FCM_WORKER_URL'),
+        _sharedSecret =
+            sharedSecret ?? const String.fromEnvironment('FCM_SHARED_SECRET');
+
   static final FcmSenderService instance = FcmSenderService._();
 
-  /// Inyectado en build con --dart-define=FCM_WORKER_URL=https://...
-  static const _workerUrl =
-      String.fromEnvironment('FCM_WORKER_URL');
+  /// Constructor para tests: permite inyectar URL, secret y cliente HTTP.
+  @visibleForTesting
+  factory FcmSenderService.forTest({
+    required String workerUrl,
+    required String sharedSecret,
+    required http.Client client,
+  }) =>
+      FcmSenderService._(
+        workerUrl: workerUrl,
+        sharedSecret: sharedSecret,
+        client: client,
+      );
 
-  /// Inyectado en build con --dart-define=FCM_SHARED_SECRET=...
-  static const _sharedSecret =
-      String.fromEnvironment('FCM_SHARED_SECRET');
+  final http.Client _client;
+  final String _workerUrl;
+  final String _sharedSecret;
 
   /// Envía una notificación push al [token] FCM indicado.
-  /// No hace nada en web (las notificaciones web llegan por el listener de
-  /// Firestore) ni si el Worker no está configurado aún.
+  /// No hace nada si el Worker no está configurado (URL vacía).
   Future<void> sendToToken({
     required String token,
     required String title,
@@ -43,7 +60,7 @@ class FcmSenderService {
   }) async {
     if (_workerUrl.isEmpty) return;
     try {
-      await http.post(
+      await _client.post(
         Uri.parse(_workerUrl),
         headers: {
           'Content-Type': 'application/json',
