@@ -95,7 +95,11 @@ class _ExpenseFormViewState extends State<ExpenseFormView> implements ExpenseFor
         _payingMemberIds = {if (_paidBy != null) _paidBy!};
       }
     } else {
-      _paidBy = widget.group.members.isNotEmpty ? widget.group.members.first.memberId : null;
+      final currentUid = DependencyInjector.instance.authRepository.getCurrentUser()?.id;
+      final isMember = widget.group.members.any((m) => m.memberId == currentUid);
+      _paidBy = isMember
+          ? currentUid
+          : (widget.group.members.isNotEmpty ? widget.group.members.first.memberId : null);
       _selectedMemberIds = widget.group.members.map((m) => m.memberId).toSet();
       _payingMemberIds = {if (_paidBy != null) _paidBy!};
     }
