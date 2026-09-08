@@ -108,6 +108,9 @@ unlinked_spec.ds
 node_modules/
 functions/node_modules/
 
+# Generated at build time — never commit with real values
+web/firebase-messaging-sw.js
+
 # Coverage
 coverage/
 
