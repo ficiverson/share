@@ -13,35 +13,46 @@
  * Body esperado (JSON):
  *   { token, title, body, data? }
  */
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export default {
   async fetch(request, env) {
+    // Preflight CORS — browsers send this before every cross-origin POST.
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     if (request.method !== 'POST') {
-      return new Response('Method Not Allowed', { status: 405 });
+      return new Response('Method Not Allowed', { status: 405, headers: CORS_HEADERS });
     }
 
     // Autenticación mínima: Bearer compartido con el cliente Flutter.
     const auth = request.headers.get('Authorization') ?? '';
     if (auth !== `Bearer ${env.SHARED_SECRET}`) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS });
     }
 
     let payload;
     try {
       payload = await request.json();
     } catch {
-      return new Response('Bad Request', { status: 400 });
+      return new Response('Bad Request', { status: 400, headers: CORS_HEADERS });
     }
 
     const { token, title, body, data } = payload;
     if (!token || !title) {
-      return new Response('Missing token or title', { status: 400 });
+      return new Response('Missing token or title', { status: 400, headers: CORS_HEADERS });
     }
 
     let sa;
     try {
       sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
     } catch {
-      return new Response('Worker misconfigured: bad FIREBASE_SERVICE_ACCOUNT', { status: 500 });
+      return new Response('Worker misconfigured: bad FIREBASE_SERVICE_ACCOUNT', { status: 500, headers: CORS_HEADERS });
     }
 
     try {
@@ -75,10 +86,13 @@ export default {
       const fcmJson = await fcmRes.json().catch(() => ({}));
       return new Response(JSON.stringify(fcmJson), {
         status: fcmRes.status,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
     } catch (err) {
-      return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+      return new Response(JSON.stringify({ error: String(err) }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
     }
   },
 };
